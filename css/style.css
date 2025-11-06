@@ -1807,17 +1807,6 @@ section {
     transition: all 0.3s ease;
 }
 
-/* CKS Logo - Dark background for white logo */
-.brand-cks .brand-logo-box {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.brand-cks:hover .brand-logo-box {
-    background: linear-gradient(135deg, #16213e 0%, #0f1419 100%);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
 .brand-grid-card:hover .brand-logo-box {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
