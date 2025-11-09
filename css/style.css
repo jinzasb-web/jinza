@@ -2033,13 +2033,27 @@ section {
 
 /* 响应式设计 */
 @media (max-width: 968px) {
+    /* 移动端允许滚动 */
+    body.single-page {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    html {
+        overflow-y: auto !important;
+    }
+    
     .split-layout {
         flex-direction: column;
+        height: auto !important;
+        min-height: auto;
     }
     
     .left-panel,
     .right-panel {
         flex: auto;
+        height: auto !important;
+        overflow-y: visible !important;
         border-right: none;
         border-bottom: 2px solid rgba(102, 126, 234, 0.1);
         padding: 2rem 1.5rem;
@@ -2092,8 +2106,30 @@ section {
 }
 
 @media (max-width: 600px) {
+    /* 移动端完全允许滚动 */
+    body.single-page {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    html {
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    .main-content {
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    
+    .split-layout {
+        height: auto !important;
+    }
+    
     .left-panel,
     .right-panel {
+        height: auto !important;
+        overflow-y: visible !important;
         padding: 1.5rem 1rem;
     }
     
