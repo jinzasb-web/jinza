@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JINZA 系统开发测试入口 | Development Entry</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dev-entry {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .dev-entry-container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .dev-entry-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .dev-entry-header h1 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dev-entry-header p {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .dev-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .dev-section {
+            margin-bottom: 2rem;
+        }
+
+        .dev-section h2 {
+            color: #334155;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dev-section h2 i {
+            color: #764ba2;
+        }
+
+        .dev-accounts {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .dev-account-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dev-account-card:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+        }
+
+        .dev-account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .dev-account-role {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1.1rem;
+        }
+
+        .dev-account-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .dev-account-credentials {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .dev-credential-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .dev-credential-label {
+            color: #64748b;
+            font-weight: 600;
+            min-width: 80px;
+        }
+
+        .dev-credential-value {
+            background: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            color: #764ba2;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+        }
+
+        .dev-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .dev-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .dev-btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .dev-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .dev-btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .dev-btn-secondary:hover {
+            background: #f0f4ff;
+        }
+
+        .dev-info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+
+        .dev-info-box h3 {
+            color: #1e40af;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .dev-info-box ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #1e40af;
+        }
+
+        .dev-info-box li {
+            margin-bottom: 0.25rem;
+        }
+
+        .dev-quick-access {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .dev-quick-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .dev-quick-card:hover {
+            border-color: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(118, 75, 162, 0.2);
+        }
+
+        .dev-quick-card i {
+            font-size: 2rem;
+            color: #764ba2;
+            margin-bottom: 0.5rem;
+        }
+
+        .dev-quick-card h4 {
+            color: #334155;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="dev-entry">
+        <div class="dev-entry-container">
+            <div class="dev-entry-header">
+                <div class="dev-badge">
+                    <i class="fas fa-flask"></i> DEVELOPMENT MODE
+                </div>
+                <h1>🚀 JINZA 系统开发测试入口</h1>
+                <p>Development Entry Point - Malaysian Compliant IMS & Accounting System</p>
+            </div>
+
+            <!-- 测试账户选择 -->
+            <div class="dev-section">
+                <h2>
+                    <i class="fas fa-users"></i>
+                    选择测试账户 / Select Test Account
+                </h2>
+                <div class="dev-accounts">
+                    <!-- 管理员账户 -->
+                    <div class="dev-account-card" onclick="loginAs('admin')">
+                        <div class="dev-account-header">
+                            <span class="dev-account-role">
+                                <i class="fas fa-user-shield"></i> 系统管理员 / Administrator
+                            </span>
+                            <span class="dev-account-badge">Full Access</span>
+                        </div>
+                        <div class="dev-account-credentials">
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">Username:</span>
+                                <span class="dev-credential-value">admin@jinza.com</span>
+                            </div>
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">权限:</span>
+                                <span class="dev-credential-value">所有模块 | All Modules</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 运营经理账户 -->
+                    <div class="dev-account-card" onclick="loginAs('operations')">
+                        <div class="dev-account-header">
+                            <span class="dev-account-role">
+                                <i class="fas fa-user-tie"></i> 运营经理 / Operations Manager
+                            </span>
+                            <span class="dev-account-badge">Operations</span>
+                        </div>
+                        <div class="dev-account-credentials">
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">Username:</span>
+                                <span class="dev-credential-value">ops.manager@jinza.com</span>
+                            </div>
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">权限:</span>
+                                <span class="dev-credential-value">进销存 | IMS Only</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 会计师账户 -->
+                    <div class="dev-account-card" onclick="loginAs('accountant')">
+                        <div class="dev-account-header">
+                            <span class="dev-account-role">
+                                <i class="fas fa-calculator"></i> 会计师 / Accountant
+                            </span>
+                            <span class="dev-account-badge">Finance</span>
+                        </div>
+                        <div class="dev-account-credentials">
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">Username:</span>
+                                <span class="dev-credential-value">accountant@jinza.com</span>
+                            </div>
+                            <div class="dev-credential-row">
+                                <span class="dev-credential-label">权限:</span>
+                                <span class="dev-credential-value">会计模块 | Accounting</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dev-actions">
+                    <button class="dev-btn dev-btn-primary" onclick="enterSystemDirect()">
+                        <i class="fas fa-rocket"></i>
+                        直接进入系统 (管理员权限)
+                    </button>
+                    <button class="dev-btn dev-btn-secondary" onclick="window.location.href='index.html'">
+                        <i class="fas fa-home"></i>
+                        返回首页
+                    </button>
+                </div>
+            </div>
+
+            <!-- 快速访问 -->
+            <div class="dev-section">
+                <h2>
+                    <i class="fas fa-bolt"></i>
+                    快速访问 / Quick Access
+                </h2>
+                <div class="dev-quick-access">
+                    <a href="system.html" class="dev-quick-card">
+                        <i class="fas fa-laptop-code"></i>
+                        <h4>完整系统界面<br>System Interface</h4>
+                    </a>
+                    <a href="docs/ARCHITECTURE.md" class="dev-quick-card" target="_blank">
+                        <i class="fas fa-book"></i>
+                        <h4>系统架构文档<br>Architecture</h4>
+                    </a>
+                    <a href="docs/MALAYSIAN_COMPLIANCE.md" class="dev-quick-card" target="_blank">
+                        <i class="fas fa-balance-scale"></i>
+                        <h4>合规性文档<br>Compliance</h4>
+                    </a>
+                    <a href="#" class="dev-quick-card" onclick="openDevConsole(); return false;">
+                        <i class="fas fa-terminal"></i>
+                        <h4>开发者控制台<br>Dev Console</h4>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 开发提示 -->
+            <div class="dev-info-box">
+                <h3><i class="fas fa-info-circle"></i> 开发说明 / Development Notes</h3>
+                <ul>
+                    <li>此页面仅用于开发测试，生产环境请实现后端认证</li>
+                    <li>点击账户卡片可快速模拟对应角色登录</li>
+                    <li>已移除原登录模块，当前使用 localStorage 模拟认证</li>
+                    <li>系统符合马来西亚 SST Act 2018、MFRS、Companies Act 2016</li>
+                    <li>完整的库存服务已实现，会计模块开发中</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试账户数据
+        const testAccounts = {
+            admin: {
+                username: 'admin@jinza.com',
+                role: 'Administrator',
+                fullName: 'System Administrator',
+                permissions: ['inventory', 'accounting', 'compliance', 'settings', 'users'],
+                department: 'IT'
+            },
+            operations: {
+                username: 'ops.manager@jinza.com',
+                role: 'Operations Manager',
+                fullName: 'Operations Manager',
+                permissions: ['inventory', 'purchase', 'sales'],
+                department: 'Operations'
+            },
+            accountant: {
+                username: 'accountant@jinza.com',
+                role: 'Accountant',
+                fullName: 'Senior Accountant',
+                permissions: ['accounting', 'reports', 'compliance'],
+                department: 'Finance'
+            }
+        };
+
+        /**
+         * 以指定角色登录
+         */
+        function loginAs(accountType) {
+            const account = testAccounts[accountType];
+            if (!account) {
+                alert('Invalid account type');
+                return;
+            }
+
+            // 创建用户 payload
+            const userPayload = {
+                username: account.username,
+                role: account.role,
+                fullName: account.fullName,
+                permissions: account.permissions,
+                department: account.department,
+                issuedAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24小时
+                isDevelopmentMode: true
+            };
+
+            // 保存到 localStorage
+            localStorage.setItem('jinzaUser', JSON.stringify(userPayload));
+
+            // 显示登录成功提示
+            console.log('✅ Logged in as:', userPayload);
+            
+            // 跳转到系统页面
+            window.location.href = 'system.html';
+        }
+
+        /**
+         * 直接进入系统（管理员权限）
+         */
+        function enterSystemDirect() {
+            loginAs('admin');
+        }
+
+        /**
+         * 打开开发者控制台
+         */
+        function openDevConsole() {
+            console.clear();
+            console.log('%c🚀 JINZA Development Console', 'font-size: 20px; color: #667eea; font-weight: bold;');
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #764ba2;');
+            console.log('');
+            console.log('%cAvailable Test Accounts:', 'font-size: 14px; color: #334155; font-weight: bold;');
+            console.table(testAccounts);
+            console.log('');
+            console.log('%cQuick Commands:', 'font-size: 14px; color: #334155; font-weight: bold;');
+            console.log('  loginAs("admin")       - Login as Administrator');
+            console.log('  loginAs("operations")  - Login as Operations Manager');
+            console.log('  loginAs("accountant")  - Login as Accountant');
+            console.log('  localStorage.getItem("jinzaUser") - View current session');
+            console.log('  localStorage.clear()   - Clear all data');
+            console.log('');
+            console.log('%cSystem Services Available:', 'font-size: 14px; color: #334155; font-weight: bold;');
+            console.log('  ✅ Inventory Service (js/services/inventory.service.js)');
+            console.log('  🚧 Purchase Service (in development)');
+            console.log('  🚧 Sales Service (in development)');
+            console.log('  🚧 Accounting Service (in development)');
+            console.log('');
+            console.log('%c━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'color: #764ba2;');
+            
+            alert('开发者控制台已打开，请查看浏览器 Console (F12)');
+        }
+
+        // 页面加载时检查是否已登录
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentUser = localStorage.getItem('jinzaUser');
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    console.log('✅ Current session found:', user);
+                    
+                    // 显示当前登录状态
+                    const badge = document.querySelector('.dev-badge');
+                    badge.innerHTML = `
+                        <i class="fas fa-user-check"></i> 
+                        LOGGED IN: ${user.role}
+                    `;
+                    badge.style.background = '#d1fae5';
+                    badge.style.color = '#065f46';
+                } catch (error) {
+                    console.error('Failed to parse user session:', error);
+                }
+            }
+        });
+
+        // 添加键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // Ctrl + Enter: 快速进入系统
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                enterSystemDirect();
+            }
+            // Ctrl + 1/2/3: 快速选择账户
+            if (e.ctrlKey && e.key === '1') {
+                e.preventDefault();
+                loginAs('admin');
+            }
+            if (e.ctrlKey && e.key === '2') {
+                e.preventDefault();
+                loginAs('operations');
+            }
+            if (e.ctrlKey && e.key === '3') {
+                e.preventDefault();
+                loginAs('accountant');
+            }
+        });
+    </script>
+</body>
+</html>
