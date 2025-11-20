@@ -3,13 +3,15 @@
 // =========================================
 const navbar = document.getElementById('navbar');
 
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-        navbar.classList.add('scrolled');
-    } else {
-        navbar.classList.remove('scrolled');
-    }
-});
+if (navbar) {
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+}
 
 // =========================================
 // 导航链接激活状态
@@ -60,20 +62,22 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 // =========================================
 const backToTopBtn = document.getElementById('backToTop');
 
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 300) {
-        backToTopBtn.classList.add('show');
-    } else {
-        backToTopBtn.classList.remove('show');
-    }
-});
-
-backToTopBtn.addEventListener('click', () => {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
+if (backToTopBtn) {
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            backToTopBtn.classList.add('show');
+        } else {
+            backToTopBtn.classList.remove('show');
+        }
     });
-});
+
+    backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+}
 
 // =========================================
 // 品牌卡片悬停效果
@@ -121,21 +125,23 @@ animateElements.forEach(el => {
 // =========================================
 const contactForm = document.getElementById('contactForm');
 
-contactForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // 获取表单数据
-    const formData = new FormData(contactForm);
-    
-    // 这里可以添加实际的表单提交逻辑
-    // 例如使用 fetch API 发送到服务器
-    
-    // Show success message
-    alert('Thank you for your message! We will contact you as soon as possible.');
-    
-    // Reset form
-    contactForm.reset();
-});
+if (contactForm) {
+    contactForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // 获取表单数据
+        const formData = new FormData(contactForm);
+        
+        // 这里可以添加实际的表单提交逻辑
+        // 例如使用 fetch API 发送到服务器
+        
+        // Show success message
+        alert('Thank you for your message! We will contact you as soon as possible.');
+        
+        // Reset form
+        contactForm.reset();
+    });
+}
 
 // =========================================
 // 数字滚动动画（统计数据）
@@ -186,13 +192,18 @@ window.addEventListener('load', () => {
     }, 100);
     
     // 初始化第一个滑块
-    showSlide(0);
+    if (typeof showSlide === 'function') {
+        showSlide(0);
+    }
 });
 
 // =========================================
 // 键盘导航支持
 // =========================================
 document.addEventListener('keydown', (e) => {
+    const canNavigateSlides = typeof prevSlide === 'function' && typeof nextSlide === 'function' && typeof resetSlideInterval === 'function';
+    if (!canNavigateSlides) return;
+
     // 左箭头键 - 上一张幻灯片
     if (e.key === 'ArrowLeft') {
         prevSlide();
@@ -259,17 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const wechatModal = document.getElementById('wechatModal');
     const wechatClose = document.querySelector('.wechat-close');
 
-    if (wechatBtn) {
+    if (wechatBtn && wechatModal) {
         wechatBtn.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('WeChat button clicked'); // Debug
             wechatModal.classList.add('show');
         });
-    } else {
-        console.error('WeChat button not found');
     }
 
-    if (wechatClose) {
+    if (wechatClose && wechatModal) {
         wechatClose.addEventListener('click', () => {
             wechatModal.classList.remove('show');
         });
@@ -288,6 +297,78 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && wechatModal && wechatModal.classList.contains('show')) {
             wechatModal.classList.remove('show');
+        }
+    });
+
+    // 登录模态控制
+    const loginBtn = document.getElementById('loginBtn');
+    const loginModal = document.getElementById('loginModal');
+    const loginClose = document.getElementById('loginClose');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const usernameInput = document.getElementById('username');
+
+    function openLoginModal() {
+        if (!loginModal) return;
+        loginModal.classList.add('show');
+        loginModal.setAttribute('aria-hidden', 'false');
+        if (usernameInput) {
+            usernameInput.focus({ preventScroll: true });
+        }
+    }
+
+    function closeLoginModal() {
+        if (!loginModal) return;
+        loginModal.classList.remove('show');
+        loginModal.setAttribute('aria-hidden', 'true');
+        if (loginError) {
+            loginError.textContent = '';
+            loginError.classList.remove('visible');
+        }
+    }
+
+    if (loginBtn && loginModal) {
+        loginBtn.addEventListener('click', openLoginModal);
+    }
+
+    if (loginClose) {
+        loginClose.addEventListener('click', closeLoginModal);
+    }
+
+    if (loginModal) {
+        loginModal.addEventListener('click', (event) => {
+            if (event.target === loginModal) {
+                closeLoginModal();
+            }
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const username = loginForm.username.value.trim();
+            const password = loginForm.password.value.trim();
+
+            const isValid = username.toLowerCase() === 'admin@jinza.com' && password === 'SST2025!';
+
+            if (isValid) {
+                const userPayload = {
+                    username,
+                    role: 'Administrator',
+                    issuedAt: new Date().toISOString()
+                };
+                localStorage.setItem('jinzaUser', JSON.stringify(userPayload));
+                window.location.href = 'system.html';
+            } else if (loginError) {
+                loginError.textContent = 'Invalid credentials. Please use the provided demo access.';
+                loginError.classList.add('visible');
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && loginModal && loginModal.classList.contains('show')) {
+            closeLoginModal();
         }
     });
 });

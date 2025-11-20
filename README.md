@@ -1,33 +1,36 @@
-# 3TREES Group Official Website - Malaysia
+# JINZA Trading Corporate Site & Operations Suite
 
-A modern, responsive corporate showcase website for 3TREES Group's authorized distributor in Malaysia.
+A single-page corporate presence with direct access to JINZA Trading&rsquo;s bilingual Inventory & Accounting operations suite. Built for Malaysian regulatory alignment and SST compliance.
 
-## About 3TREES
+## About JINZA & Partner Brands
 
-Founded in 2002, SKSHU Paint Co., Ltd. (3TREES) is committed to creating a better life and healthier living environment for humanity. Listed on the Shanghai Stock Exchange A-share main board in 2016, with a brand value of 33.155 billion yuan in 2021, 3TREES is a leading coating company among China's top 500 private enterprises.
-
-**This website is operated by the authorized distributor for Malaysia.**
+JINZA Trading Sdn. Bhd. is the authorized distributor for premium coating solutions in Malaysia, representing 3TREES, CKS, Chenyang, and Oriental Yuhong. The homepage introduces our brand story, core value propositions, and allows quick access to partner brand microsites.
 
 ## Key Features
 
-✨ **Core Features**
-- 🎨 Modern design with stunning visual effects
-- 📱 Fully responsive, supports all devices
-- 🔄 Automatic carousel slider
-- ✨ Smooth scrolling animations
-- 🎯 Clear navigation structure
-- 📧 Contact form functionality
-- 🌍 English language interface
+✨ **Corporate Presence**
+- 🎨 Modern split-layout homepage highlighting company mission and partner brands
+- 📱 Responsive grid for brand showcase and social links
+- � Built-in WeChat QR modal for quick contact
+
+🛠️ **Operations Suite Access**
+- 🔐 Login button on homepage with bilingual interface (Chinese / English)
+- 🧾 Demo credentials for rapid evaluation: `admin@jinza.com / SST2025!`
+- � Inventory, Purchasing, Sales, and Accounting modules summarised against Malaysian SST & MFRS requirements
+- � Functional items display bilingual labels; data entry fields remain in English to match statutory filings
+- 📊 Interactive dashboards: searchable stock, purchase, sales tables plus ledger & trial balance snapshots
 
 ## Website Structure
 
 ```
 jinza web/
-├── index.html          # Main page (English)
+├── index.html          # Corporate landing page with login entry
+├── system.html         # Inventory & Accounting operations suite (post-login)
 ├── css/
 │   └── style.css      # Stylesheet
 ├── js/
-│   └── script.js      # JavaScript interactions
+│   ├── script.js      # Landing page interactions & login modal
+│   └── system.js      # Operations suite navigation & form handling
 ├── images/            # Image resources folder
 │   ├── jinza-logo.png # Company logo
 │   └── README.md      # Image documentation
@@ -39,16 +42,11 @@ jinza web/
 
 ## Page Sections
 
-1. **Navigation Bar** - Fixed top navigation with JINZA logo and main links
-2. **Hero Section with Video Background** - Full-screen auto-playing video with text overlays
-3. **Star Products** - Four product showcase cards
-4. **At Your Service** - Core service features
-5. **About 3TREES** - Company introduction and corporate image
-6. **Corporate Culture** - Cultural philosophy display
-7. **Corporate Social Responsibility** - CSR and statistics
-8. **Latest News** - News article cards
-9. **Contact Us** - Contact information and form
-10. **Footer** - JINZA logo, quick links and social media
+1. **About JINZA** &ndash; Mission, differentiators, and compliance note
+2. **Partner Brands Grid** &ndash; Four-card navigation to brand detail pages
+3. **Social Footer** &ndash; Facebook, Instagram, TikTok, WhatsApp, WeChat, Email
+4. **WeChat Modal** &ndash; QR code popup for direct contact
+5. **Operations Suite Login** &ndash; Bilingual button triggering secure login modal
 
 ## Quick Start
 
@@ -107,6 +105,31 @@ jinza web/
 4. **Add More Content**
    - Copy existing section structures in HTML
    - Adjust content and styles as needed
+
+## Operations Suite Login & Compliance Notes
+
+1. **Launch the Login Modal**
+   - On `index.html`, click the button `企业系统登录 / Business Login`
+   - Modal highlights bilingual features while keeping form inputs in English
+
+2. **Demo Credentials**
+   - Username: `admin@jinza.com`
+   - Password: `SST2025!`
+
+3. **Post-login Experience (`system.html`)**
+   - **Inventory Operations**: Stock, Purchase, and Sales cards mapped to Malaysian SST workflow requirements
+   - **Accounting Ledger**: Journal, Reporting, and Audit Trail summaries referencing MFRS and LHDN expectations
+   - **Compliance Guide**: Quick reference for Companies Act 2016, SST Act 2018, and LHDN e-Invoice mandates
+   - **Interactive Grids**: Searchable bilingual tables for stock, purchase, sales, ledger, trial balance, and compliance calendar
+   - **Metric Cards**: Snapshot tiles for on-hand units, inbound shipments, pending fulfilment, debit/credit totals, and compliance workload
+
+4. **Data Entry Policy**
+   - All functional headings and buttons present both Chinese and English
+   - Data capture fields remain English-only to match statutory filings, audit trails, and SST submissions
+
+5. **Session Handling**
+   - Demo login profile stored in `localStorage` under `jinzaUser`
+   - Use the `退出 / Logout` button in the suite header to clear the profile and return to the homepage
 
 ## Technology Stack
 
@@ -172,12 +195,11 @@ jinza web/
 
 ## Future Development Suggestions
 
-- [ ] Add multi-language support (Chinese/English toggle)
-- [ ] Integrate backend API (form submission, data management)
-- [ ] Add more pages (product details, news details, etc.)
-- [ ] SEO optimization (meta tags, sitemap)
-- [ ] Add live chat functionality
-- [ ] Integrate analytics tools (Google Analytics)
+- [ ] Replace demo authentication with production-ready identity provider (Azure AD / Auth0)
+- [ ] Persist inventory and accounting records to secure backend services (API + database)
+- [ ] Automate SST-02 and e-Invoice exports directly from `system.html`
+- [ ] Add role-based access control for warehouse, sales, and finance teams
+- [ ] Enhance analytics dashboard with bilingual KPI widgets
 
 ## Important Note
 
@@ -189,6 +211,6 @@ For inquiries about 3TREES products in Malaysia, please use the contact form on 
 
 ---
 
-**Last Updated:** November 5, 2025
-**Version:** 1.0.0
+**Last Updated:** November 20, 2025
+**Version:** 1.1.0
 **Authorized Distributor:** Malaysia Region

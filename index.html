@@ -20,6 +20,12 @@
                             <img src="images/jinza-logo.png" alt="JINZA Logo" class="panel-logo">
                             <h2 class="panel-title">About JINZA</h2>
                         </div>
+                        <div class="panel-actions">
+                            <button class="btn-login" id="loginBtn" type="button" aria-haspopup="dialog">
+                                企业系统登录 / Business Login
+                            </button>
+                            <p class="login-hint">Access to Inventory &amp; Accounting modules compliant with Malaysian regulations.</p>
+                        </div>
                         <div class="about-info">
                             <p class="company-intro"><strong>JINZA</strong> is a leading authorized distributor of premium coating and paint brands in Malaysia.</p>
                             
@@ -140,6 +146,36 @@
             <h3>Scan QR Code to Add WeChat</h3>
             <img src="images/wechat-qr.jpg" alt="WeChat QR Code" class="wechat-qr-image">
             <p>Jinza Trading - Malaysia</p>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal" aria-hidden="true" role="dialog" aria-labelledby="loginTitle">
+        <div class="login-modal-content">
+            <button class="login-close" id="loginClose" aria-label="Close login dialog">&times;</button>
+            <h3 id="loginTitle" class="login-title">企业系统登录 <span>Business System Login</span></h3>
+            <p class="login-intro">Gain secure access to JINZA&rsquo;s Inventory, Purchasing, Sales, and Accounting modules aligned with Malaysian SST and Companies Act requirements.</p>
+            <ul class="login-feature-list">
+                <li>进销存合规流程 / Inventory &amp; SST compliant workflows</li>
+                <li>会计科目与报表 / Accounting Ledger &amp; Statutory Reports</li>
+                <li>双语操作界面 / Bilingual navigation for team collaboration</li>
+            </ul>
+            <form id="loginForm" class="login-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required placeholder="Enter username" inputmode="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter password">
+                </div>
+                <p class="login-credentials">Demo access: <span>admin@jinza.com / SST2025!</span></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-login-submit">登录 / Login</button>
+                </div>
+                <p class="login-compliance-note">All data entry fields use English for consistency with Malaysian statutory filings.</p>
+                <div class="login-error" id="loginError" role="alert" aria-live="assertive"></div>
+            </form>
         </div>
     </div>
 
