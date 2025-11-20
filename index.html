@@ -9,6 +9,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="single-page">
+    <header class="site-topbar">
+        <button class="btn-login" id="loginBtn" type="button" aria-haspopup="dialog">
+            <i class="fas fa-lock"></i>
+            <span>企业系统登录 / Business Login</span>
+        </button>
+    </header>
     <!-- Main Content - Single Page Layout -->
     <main class="main-content">
         <div class="container-full">
@@ -19,12 +25,6 @@
                         <div class="panel-header">
                             <img src="images/jinza-logo.png" alt="JINZA Logo" class="panel-logo">
                             <h2 class="panel-title">About JINZA</h2>
-                        </div>
-                        <div class="panel-actions">
-                            <button class="btn-login" id="loginBtn" type="button" aria-haspopup="dialog">
-                                企业系统登录 / Business Login
-                            </button>
-                            <p class="login-hint">Access to Inventory &amp; Accounting modules compliant with Malaysian regulations.</p>
                         </div>
                         <div class="about-info">
                             <p class="company-intro"><strong>JINZA</strong> is a leading authorized distributor of premium coating and paint brands in Malaysia.</p>
@@ -153,13 +153,10 @@
     <div id="loginModal" class="login-modal" aria-hidden="true" role="dialog" aria-labelledby="loginTitle">
         <div class="login-modal-content">
             <button class="login-close" id="loginClose" aria-label="Close login dialog">&times;</button>
-            <h3 id="loginTitle" class="login-title">企业系统登录 <span>Business System Login</span></h3>
-            <p class="login-intro">Gain secure access to JINZA&rsquo;s Inventory, Purchasing, Sales, and Accounting modules aligned with Malaysian SST and Companies Act requirements.</p>
-            <ul class="login-feature-list">
-                <li>进销存合规流程 / Inventory &amp; SST compliant workflows</li>
-                <li>会计科目与报表 / Accounting Ledger &amp; Statutory Reports</li>
-                <li>双语操作界面 / Bilingual navigation for team collaboration</li>
-            </ul>
+            <h3 id="loginTitle" class="login-title">
+                <i class="fas fa-user-shield"></i>
+                <span>企业系统登录 / Business System Login</span>
+            </h3>
             <form id="loginForm" class="login-form" autocomplete="off">
                 <div class="form-group">
                     <label for="username">Username</label>
@@ -169,13 +166,18 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" required placeholder="Enter password">
                 </div>
-                <p class="login-credentials">Demo access: <span>admin@jinza.com / SST2025!</span></p>
                 <div class="form-actions">
                     <button type="submit" class="btn-login-submit">登录 / Login</button>
                 </div>
-                <p class="login-compliance-note">All data entry fields use English for consistency with Malaysian statutory filings.</p>
                 <div class="login-error" id="loginError" role="alert" aria-live="assertive"></div>
             </form>
+            <section class="login-test-accounts" aria-label="Test accounts">
+                <h4>测试账户 / Test Accounts</h4>
+                <ul>
+                    <li><span>Administrator</span><code>admin@jinza.com</code><code>SST2025!</code></li>
+                    <li><span>Operations Manager</span><code>ops.manager@jinza.com</code><code>IMS2025!</code></li>
+                </ul>
+            </section>
         </div>
     </div>
 

@@ -307,6 +307,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     const usernameInput = document.getElementById('username');
+    const demoAccounts = [
+        {
+            username: 'admin@jinza.com',
+            password: 'SST2025!',
+            role: 'Administrator'
+        },
+        {
+            username: 'ops.manager@jinza.com',
+            password: 'IMS2025!',
+            role: 'Operations Manager'
+        }
+    ];
 
     function openLoginModal() {
         if (!loginModal) return;
@@ -349,12 +361,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const username = loginForm.username.value.trim();
             const password = loginForm.password.value.trim();
 
-            const isValid = username.toLowerCase() === 'admin@jinza.com' && password === 'SST2025!';
+            const matchedAccount = demoAccounts.find(account =>
+                account.username.toLowerCase() === username.toLowerCase() && account.password === password
+            );
 
-            if (isValid) {
+            if (matchedAccount) {
                 const userPayload = {
-                    username,
-                    role: 'Administrator',
+                    username: matchedAccount.username,
+                    role: matchedAccount.role,
                     issuedAt: new Date().toISOString()
                 };
                 localStorage.setItem('jinzaUser', JSON.stringify(userPayload));

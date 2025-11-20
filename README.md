@@ -46,7 +46,7 @@ jinza web/
 2. **Partner Brands Grid** &ndash; Four-card navigation to brand detail pages
 3. **Social Footer** &ndash; Facebook, Instagram, TikTok, WhatsApp, WeChat, Email
 4. **WeChat Modal** &ndash; QR code popup for direct contact
-5. **Operations Suite Login** &ndash; Bilingual button triggering secure login modal
+5. **Operations Suite Login** &ndash; Bilingual button fixed at top-right corner opening the secure login modal
 
 ## Quick Start
 
@@ -112,9 +112,9 @@ jinza web/
    - On `index.html`, click the button `企业系统登录 / Business Login`
    - Modal highlights bilingual features while keeping form inputs in English
 
-2. **Demo Credentials**
-   - Username: `admin@jinza.com`
-   - Password: `SST2025!`
+2. **Test Accounts**
+   - Administrator &ndash; `admin@jinza.com` / `SST2025!`
+   - Operations Manager &ndash; `ops.manager@jinza.com` / `IMS2025!`
 
 3. **Post-login Experience (`system.html`)**
    - **Inventory Operations**: Stock, Purchase, and Sales cards mapped to Malaysian SST workflow requirements
