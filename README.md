@@ -1,6 +1,26 @@
-# JINZA Trading Corporate Site & Operations Suite
+# JINZA Tr## Key Features
+
+✨ **Corporate Presence**
+- 🎨 Modern split-layout homepage highlighting company mission and partner brands
+- 📱 Responsive grid for brand showcase and social links
+- 💬 Built-in WeChat QR modal for quick contact
+
+🚀 **Development & Testing** (NEW)
+- 🧪 **dev-entry.html**: Beautiful development testing portal with 3 test accounts
+- ⚡ Quick login simulation (Admin, Operations Manager, Accountant)
+- ⌨️ Keyboard shortcuts: Ctrl+Enter, Ctrl+1/2/3 for rapid testing
+- 📖 Complete testing guide: [DEV_TESTING_GUIDE.md](DEV_TESTING_GUIDE.md)
+
+🛠️ **Operations Suite Access**
+- 📋 Modular ES6 architecture with Malaysian compliance built-in
+- ✅ Inventory Service fully implemented (SST 6%, weighted average costing)
+- 🚧 Purchase, Sales, and Accounting services in development
+- 📊 Interactive dashboards with bilingual interface (Chinese / English)
+- 📄 Comprehensive documentation (Architecture, Compliance, API)te Site & Operations Suite
 
 A single-page corporate presence with direct access to JINZA Trading&rsquo;s bilingual Inventory & Accounting operations suite. Built for Malaysian regulatory alignment and SST compliance.
+
+**Last Updated**: 2025-11-21 | **Version**: 2.1.0 | **Status**: 🚀 Development Active
 
 ## About JINZA & Partner Brands
 
@@ -23,21 +43,38 @@ JINZA Trading Sdn. Bhd. is the authorized distributor for premium coating soluti
 ## Website Structure
 
 ```
-jinza web/
-├── index.html          # Corporate landing page with login entry
-├── system.html         # Inventory & Accounting operations suite (post-login)
+jinza-web/
+├── index.html                  # Corporate landing page (login removed)
+├── system.html                 # Operations suite (requires authentication)
+├── dev-entry.html             # 🆕 Development testing portal (recommended)
+├── DEV_TESTING_GUIDE.md       # 🆕 Complete testing documentation
+│
 ├── css/
-│   └── style.css      # Stylesheet
+│   └── style.css              # Global stylesheet
+│
 ├── js/
-│   ├── script.js      # Landing page interactions & login modal
-│   └── system.js      # Operations suite navigation & form handling
-├── images/            # Image resources folder
-│   ├── jinza-logo.png # Company logo
-│   └── README.md      # Image documentation
-├── videos/            # Video resources folder
-│   ├── hero-video.mp4 # Background video (add your video here)
-│   └── README.md      # Video setup guide
-└── README.md          # This document
+│   ├── script.js              # Landing page interactions
+│   ├── system-app.js          # System main entry (ES6 modules)
+│   ├── config/
+│   │   ├── constants.js       # System configuration
+│   │   └── chartOfAccounts.js # 39 Malaysian MFRS accounts
+│   ├── services/
+│   │   ├── inventory.service.js  # ✅ Inventory service (complete)
+│   │   ├── purchase.service.js   # 🚧 Purchase service (planned)
+│   │   ├── sales.service.js      # 🚧 Sales service (planned)
+│   │   └── accounting.service.js # 🚧 Accounting service (planned)
+│   └── utils/
+│       └── demoData.js        # Demo data initialization
+│
+├── docs/
+│   ├── ARCHITECTURE.md              # System architecture design
+│   ├── MALAYSIAN_COMPLIANCE.md      # Compliance documentation
+│   ├── CLEANUP_REPORT.md            # Code cleanup report
+│   └── LOGIN_MODULE_REMOVAL.md      # Login removal details
+│
+├── images/                    # Image resources
+├── videos/                    # Video resources
+└── README.md                  # This document
 ```
 
 ## Page Sections
