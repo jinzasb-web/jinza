@@ -9,12 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="single-page">
-    <header class="site-topbar">
-        <button class="btn-login" id="loginBtn" type="button" aria-haspopup="dialog">
-            <i class="fas fa-lock"></i>
-            <span>企业系统登录 / Business Login</span>
-        </button>
-    </header>
     <!-- Main Content - Single Page Layout -->
     <main class="main-content">
         <div class="container-full">
@@ -146,38 +140,6 @@
             <h3>Scan QR Code to Add WeChat</h3>
             <img src="images/wechat-qr.jpg" alt="WeChat QR Code" class="wechat-qr-image">
             <p>Jinza Trading - Malaysia</p>
-        </div>
-    </div>
-
-    <!-- Login Modal -->
-    <div id="loginModal" class="login-modal" aria-hidden="true" role="dialog" aria-labelledby="loginTitle">
-        <div class="login-modal-content">
-            <button class="login-close" id="loginClose" aria-label="Close login dialog">&times;</button>
-            <h3 id="loginTitle" class="login-title">
-                <i class="fas fa-user-shield"></i>
-                <span>企业系统登录 / Business System Login</span>
-            </h3>
-            <form id="loginForm" class="login-form" autocomplete="off">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required placeholder="Enter username" inputmode="email">
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required placeholder="Enter password">
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn-login-submit">登录 / Login</button>
-                </div>
-                <div class="login-error" id="loginError" role="alert" aria-live="assertive"></div>
-            </form>
-            <section class="login-test-accounts" aria-label="Test accounts">
-                <h4>测试账户 / Test Accounts</h4>
-                <ul>
-                    <li><span>Administrator</span><code>admin@jinza.com</code><code>SST2025!</code></li>
-                    <li><span>Operations Manager</span><code>ops.manager@jinza.com</code><code>IMS2025!</code></li>
-                </ul>
-            </section>
         </div>
     </div>
 
