@@ -2879,3 +2879,139 @@ section {
         padding: 0 1rem;
     }
 }
+
+/* =========================================
+   系统模块化组件样式
+   System Modular Component Styles
+   ========================================= */
+
+/* Badge 样式 */
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background-color: #10b981;
+    color: #ffffff;
+}
+
+.badge-warning {
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+.badge-info {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+
+.badge-danger {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+.badge-secondary {
+    background-color: #6b7280;
+    color: #ffffff;
+}
+
+/* 图标按钮 */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    margin: 0 0.25rem;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background-color: #f3f4f6;
+    color: #667eea;
+}
+
+.btn-icon:active {
+    background-color: #e5e7eb;
+}
+
+.btn-icon i {
+    font-size: 1rem;
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9ca3af;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #6b7280;
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+/* 加载状态 */
+.loading-spinner {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid #f3f4f6;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 表格操作列 */
+.table-wrapper tbody td:last-child {
+    white-space: nowrap;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .btn-icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        margin: 0 0.125rem;
+    }
+    
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
