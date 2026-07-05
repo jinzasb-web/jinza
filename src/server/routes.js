@@ -17,6 +17,14 @@ import archiver from 'archiver'
 import unzipper from 'unzipper'
 import { resolveBackupDir, runBackupOnce } from './backup_automation.js'
 
+// 安全引用表名：仅允许来自 pg_catalog.pg_class 的 public schema 表
+// 用于备份/恢复等需要动态表名的场景
+function quoteIdent(name, allowed) {
+  if (!allowed || !allowed.has(name)) return null
+  // 双引号内的双引号双写以转义
+  return `"${name.replace(/"/g, '""')}"`
+}
+
 export const router = express.Router()
 const upload = multer({ dest: 'uploads/' })
 
@@ -272,8 +280,8 @@ router.get('/system/tables', auth.authMiddleware(true), async (req, res) => {
       let rows = Number(r.est_rows||0)
       if (exact) {
         try {
-          // Use quote_ident for safe table name quoting
-          const cnt = await query(`select count(*) from "${r.name.replace(/"/g, '
+          // Table names come from pg_class only, safe to use directly
+          const cnt = await query(`select count(*) from "${r.name}"`)
           rows = Number(cnt.rows?.[0]?.count||0)
         } catch {}
       }
@@ -309,10 +317,9 @@ router.post('/system/backup', auth.authMiddleware(true), async (req, res) => {
     archive.append(JSON.stringify(meta,null,2), { name: 'meta.json' })
     // dump each table
     const allowedTables = new Set(all || [])
-    const sqlSafeTable = (name) => allowedTables.has(name) ? `"${name}"` : null
     for (const t of pick) {
       try {
-        const safe = sqlSafeTable(t)
+        const safe = quoteIdent(t, allowedTables)
         if (!safe) continue
         const rs = await query(`select * from ${safe}`)
         const text = JSON.stringify({ name: t, count: rs.rowCount, rows: rs.rows })
@@ -395,8 +402,7 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
 
     // 强制 truncate with cascade
     {
-      const allowedTables = new Set(all)
-      const safeTruncate = order.filter(n => allowedTables.has(n)).map(n => `"${n}"`).join(',')
+      const safeTruncate = order.filter(n => allowedTables.has(n)).map(n => quoteIdent(n, allowedTables)).filter(Boolean).join(',')
       if (safeTruncate) {
         await query(`truncate table ${safeTruncate} restart identity cascade`)
       }
@@ -416,7 +422,7 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
       const colsSet = new Set(colsRs.rows.map(r=>r.column_name))
       const keys = Array.from(new Set(rows.flatMap(r=>Object.keys(r)))).filter(k=>colsSet.has(k))
       if (!keys.length) continue
-      const safeTbl = allowedTables.has(tbl) ? `"${tbl}"` : null
+      const safeTbl = quoteIdent(tbl, allowedTables)
       if (!safeTbl) continue
       for (const r of rows) {
         const vals = keys.map(k => r[k] === undefined ? null : r[k])
