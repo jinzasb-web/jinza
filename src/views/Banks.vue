@@ -22,6 +22,7 @@
           <div class="names">
             <span class="zh text-clip">{{ b.zh }}</span>
             <span class="en text-clip">{{ b.en }}</span>
+            <span class="time text-clip">{{ b.created_at?.slice(0,16)?.replace('T',' ') || '-' }}</span>
           </div>
           <div class="ops" @dblclick.stop>
             <!-- 列表操作移除，改为双击整卡进入编辑；保留空容器保持布局 -->
@@ -267,6 +268,7 @@ onMounted(load)
 .ops { display: flex; gap: 6px; }
 .form { display: grid; gap: 12px; }
 .hint { color: var(--el-text-color-secondary); font-size: 12px; margin-left: 8px; }
+.time { font-size: 11px; color: var(--el-text-color-placeholder); font-family: monospace; margin-left: 8px; }
 .text-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 页面主表卡片：透明无边框（对话框保留默认样式） */

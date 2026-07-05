@@ -45,6 +45,9 @@
         <el-table-column prop="balance" :label="$t('accounts.fields.balance')" sortable="custom" :width="colW('balance', 140)">
           <template #default="{ row }">{{ formatMoney(row.balance) }}</template>
         </el-table-column>
+        <el-table-column prop="created_at" label="创建时间" sortable="custom" :width="colW('created_at', 160)">
+          <template #default="{ row }">{{ row.created_at?.slice(0,16)?.replace('T',' ') || '-' }}</template>
+        </el-table-column>
         <el-table-column :label="$t('accounts.fields.ops')" :width="colW('ops', 100)">
           <template #default="{ row }">
             <el-popconfirm :title="$t('common.confirmDelete')" @confirm="remove(row)">

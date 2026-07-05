@@ -60,6 +60,9 @@
           <template #default="{ row }"><span class="pos" v-if="Number(row.balance_cny) >= 0">{{ formatMoney(row.balance_cny) }}</span><span class="neg" v-else>{{ formatMoney(row.balance_cny) }}</span></template>
         </el-table-column>
         <el-table-column prop="submitter" :label="$t('customers.fields.submitter')" :width="colW('submitter', 140)" />
+        <el-table-column prop="created_at" label="创建时间" :width="colW('created_at', 160)">
+          <template #default="{ row }">{{ row.created_at?.slice(0,16)?.replace('T',' ') || '-' }}</template>
+        </el-table-column>
         <el-table-column :label="$t('customers.fields.ops')" :width="colW('ops', 120)">
           <template #default="{ row }">
             <el-button link type="primary" @click="openAccounts(row)">{{ $t('customers.viewAccounts') }}</el-button>

@@ -107,6 +107,10 @@
                     <span class="k">PERMS</span>
                     <span class="v">{{ u._perms.length }}</span>
                   </span>
+                  <span class="kv">
+                    <span class="k">创建时间</span>
+                    <span class="v">{{ u.created_at?.slice(0,16)?.replace('T',' ') || '-' }}</span>
+                  </span>
                 </div>
               </div>
             </div>
