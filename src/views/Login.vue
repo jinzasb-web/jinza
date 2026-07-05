@@ -4,56 +4,51 @@
       <div class="bg-shapes">
         <div class="shape shape-1"></div>
         <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
       </div>
     </div>
     <div class="login-container">
       <div class="login-card">
-        <div class="card-header">
-          <div class="brand">
-            <div class="brand-icon">
-              <svg viewBox="0 0 40 40" width="40" height="40" fill="none">
-                <rect width="40" height="40" rx="10" fill="var(--el-color-primary)"/>
-                <text x="20" y="26" text-anchor="middle" fill="#fff" font-size="20" font-weight="700" font-family="system-ui">J</text>
-              </svg>
-            </div>
-            <div class="brand-text">
-              <h1 class="brand-name">JINZA</h1>
-              <p class="brand-subtitle">{{ t('app.subtitle') || 'Enterprise Management' }}</p>
-            </div>
+        <div class="card-body">
+          <div class="brand-section">
+            <img src="/logo.png" alt="JINZA TRADING" class="brand-logo" />
+            <h1 class="brand-name">JINZA TRADING SDN. BHD.</h1>
+            <p class="brand-subtitle">企业管理系统</p>
           </div>
 
-        </div>
-
-        <div class="card-body">
-          <h2 class="welcome-title">{{ t('login.welcome') }}</h2>
-          <p class="welcome-desc">{{ t('login.pleaseSignIn') }}</p>
-
-          <el-form @submit.prevent="onSubmit" class="login-form" label-position="top">
-            <el-form-item :label="t('login.username')">
-              <el-input v-model.trim="form.username" :placeholder="t('login.usernamePlaceholder') || t('login.username')" size="large" autofocus @keyup.enter="focusPassword">
+          <el-form @submit.prevent="onSubmit" class="login-form">
+            <el-form-item>
+              <el-input
+                v-model.trim="form.username"
+                placeholder="用户名"
+                size="large"
+                autofocus
+                @keyup.enter="focusPassword"
+              >
                 <template #prefix><el-icon><User /></el-icon></template>
               </el-input>
             </el-form-item>
 
-            <el-form-item :label="t('login.password')">
-              <el-input ref="passwordInput" v-model.trim="form.password" type="password" show-password size="large" :placeholder="t('login.passwordPlaceholder') || t('login.password')" @keyup.enter="onSubmit">
+            <el-form-item>
+              <el-input
+                ref="passwordInput"
+                v-model.trim="form.password"
+                type="password" show-password size="large"
+                placeholder="密码"
+                @keyup.enter="onSubmit"
+              >
                 <template #prefix><el-icon><Lock /></el-icon></template>
               </el-input>
             </el-form-item>
 
-            <div class="login-options">
-              <el-checkbox v-model="remember">{{ t('login.rememberMe') }}</el-checkbox>
-            </div>
-
-            <el-button type="primary" :loading="submitting" @click="onSubmit" class="login-button" size="large">
-              {{ t('login.submit') }}
+            <el-button
+              type="primary" :loading="submitting"
+              @click="onSubmit" class="login-button" size="large"
+            >
+              登 录
             </el-button>
           </el-form>
-        </div>
 
-        <div class="card-footer">
-          <p class="footer-text">JINZA TRADING SDN. BHD. &copy; {{ new Date().getFullYear() }}</p>
+          <div class="footer-text">JINZA TRADING SDN. BHD.</div>
         </div>
       </div>
     </div>
@@ -65,49 +60,46 @@ import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/api'
 import { useAuth } from '@/composables/useAuth'
-import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
 const form = ref({ username: '', password: '' })
-const remember = ref(true)
 const submitting = ref(false)
 const passwordInput = ref(null)
-const { t } = useI18n()
 const { save } = useAuth()
 
 const focusPassword = () => { passwordInput.value?.focus() }
 
 const onSubmit = async () => {
   if (!form.value.username || !form.value.password) {
-    ElMessage({ message: t('login.errors.missingCredentials'), type: 'warning', duration: 2000 })
+    ElMessage({ message: '请输入用户名和密码', type: 'warning', duration: 2000 })
     return
   }
   submitting.value = true
   try {
     const res = await api.login(form.value.username, form.value.password)
-    save({ token: res.token, user: res.user, perms: res.perms, must_change_password: !!res.must_change_password }, remember.value)
+    save({ token: res.token, user: res.user, perms: res.perms, must_change_password: !!res.must_change_password }, true)
     const redirect = res.must_change_password ? '/change-password' : (route.query.redirect || '/')
     if (res.must_change_password) {
-      ElMessage({ message: t('login.firstLoginTip'), type: 'warning', duration: 1800 })
+      ElMessage({ message: '首次登录，请修改密码', type: 'warning', duration: 1800 })
     } else {
-      ElMessage({ message: t('login.successEntering'), type: 'success', duration: 1500 })
+      ElMessage({ message: '登录成功', type: 'success', duration: 1500 })
     }
     setTimeout(() => { window.location.href = redirect === '/' ? '/' : String(redirect) }, 500)
   } catch (e) {
     const code = e?.code
     let text = ''
-    if (code === 'MISSING_CREDENTIALS') text = t('login.errors.missingCredentials')
-    else if (code === 'USER_NOT_FOUND') text = t('login.errors.userNotFound')
-    else if (code === 'USER_DISABLED') text = t('login.errors.userDisabled')
-    else if (code === 'INVALID_PASSWORD') text = t('login.errors.invalidPassword')
+    if (code === 'MISSING_CREDENTIALS') text = '请输入用户名和密码'
+    else if (code === 'USER_NOT_FOUND') text = '用户不存在'
+    else if (code === 'USER_DISABLED') text = '账号已被禁用'
+    else if (code === 'INVALID_PASSWORD') text = '密码错误'
     else {
       try { const data = JSON.parse(e.message); text = data?.error || data?.message || '' } catch { text = e?.message || '' }
     }
-    if (!text) text = t('login.errors.defaultError')
-    ElMessage({ message: t('login.failedWithMsg', { msg: text }), type: 'error', duration: 3200 })
+    if (!text) text = '登录失败，请稍后重试'
+    ElMessage({ message: '登录失败：' + text, type: 'error', duration: 3200 })
   } finally { submitting.value = false }
 }
 </script>
@@ -119,74 +111,95 @@ const onSubmit = async () => {
 }
 .login-bg {
   position: fixed; inset: 0; z-index: 0; overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
 }
 .bg-shapes { position: absolute; inset: 0; }
 .shape {
-  position: absolute; border-radius: 50%; opacity: 0.15;
+  position: absolute; border-radius: 50%; opacity: 0.08;
 }
 .shape-1 {
-  width: 600px; height: 600px; top: -150px; right: -100px;
-  background: radial-gradient(circle, #fff 0%, transparent 70%);
-  animation: float 12s ease-in-out infinite;
+  width: 600px; height: 600px; top: -200px; right: -150px;
+  background: radial-gradient(circle, #e94560 0%, transparent 70%);
+  animation: float1 14s ease-in-out infinite;
 }
 .shape-2 {
-  width: 400px; height: 400px; bottom: -80px; left: -80px;
-  background: radial-gradient(circle, #fff 0%, transparent 70%);
-  animation: float 16s ease-in-out infinite reverse;
+  width: 450px; height: 450px; bottom: -120px; left: -100px;
+  background: radial-gradient(circle, #533483 0%, transparent 70%);
+  animation: float2 18s ease-in-out infinite;
 }
-.shape-3 {
-  width: 250px; height: 250px; top: 40%; left: 60%;
-  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
-  animation: float 10s ease-in-out infinite 2s;
+@keyframes float1 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(-40px,30px) scale(1.08); }
 }
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
+@keyframes float2 {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(30px,-40px) scale(1.05); }
 }
 .login-container {
-  position: relative; z-index: 1; width: 100%; max-width: 420px;
-  animation: cardEnter 0.6s cubic-bezier(.22,.98,.34,1.02) both;
+  position: relative; z-index: 1; width: 100%; max-width: 380px;
+  animation: cardIn 0.7s cubic-bezier(.22,.98,.34,1.02) both;
 }
-@keyframes cardEnter {
-  0% { opacity: 0; transform: translateY(24px) scale(.97); }
+@keyframes cardIn {
+  0% { opacity: 0; transform: translateY(30px) scale(.95); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .login-card {
-  background: #fff; border-radius: 16px;
-  box-shadow: 0 20px 60px -12px rgba(0,0,0,.25), 0 4px 18px -6px rgba(0,0,0,.15);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 25px 80px -15px rgba(0,0,0,0.5);
   overflow: hidden;
 }
-.card-header {
-  display: flex; align-items: center; justify-content: space-between; padding: 28px 32px 0;
+.card-body { padding: 40px 36px 36px; }
+.brand-section { text-align: center; margin-bottom: 32px; }
+.brand-logo {
+  width: 100px; height: auto; margin-bottom: 16px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
 }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand-icon { flex-shrink: 0; }
-.brand-name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #303133; line-height: 1.2; }
-.brand-subtitle { margin: 2px 0 0; font-size: 12px; color: #909399; }
-
-.card-body { padding: 28px 32px 20px; }
-.welcome-title { margin: 0 0 4px; font-size: 20px; font-weight: 700; color: #303133; }
-.welcome-desc { margin: 0 0 24px; font-size: 14px; color: #909399; }
-.login-form { display: flex; flex-direction: column; gap: 18px; }
-.login-form :deep(.el-form-item) { margin-bottom: 0; }
-.login-form :deep(.el-form-item__label) { font-size: 13px; font-weight: 600; color: #303133; padding-bottom: 4px; }
-.login-form :deep(.el-input__wrapper) { border-radius: 10px; box-shadow: 0 0 0 1px #dcdfe6 inset; transition: box-shadow .2s; }
-.login-form :deep(.el-input__wrapper:hover) { box-shadow: 0 0 0 1px #409eff inset; }
-.login-form :deep(.is-focus.el-input__wrapper) { box-shadow: 0 0 0 2px #409eff inset !important; }
-.login-form :deep(.el-input__inner) { font-weight: 500; }
-.login-form :deep(.el-input__prefix) { color: #c0c4cc; }
-.login-options { display: flex; justify-content: space-between; align-items: center; margin: 2px 0; }
-.login-button { width: 100%; height: 46px; font-size: 15px; font-weight: 700; letter-spacing: .5px; border-radius: 10px; margin-top: 4px; transition: transform .15s, box-shadow .2s; }
-.login-button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px -6px #409eff; }
+.brand-name {
+  margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 1px;
+  color: rgba(255,255,255,0.9); line-height: 1.3;
+}
+.brand-subtitle {
+  margin: 6px 0 0; font-size: 13px; color: rgba(255,255,255,0.5);
+  letter-spacing: 2px;
+}
+.login-form { display: flex; flex-direction: column; gap: 16px; }
+.login-form :deep(.el-input__wrapper) {
+  background: rgba(255,255,255,0.1) !important;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset;
+  transition: all .25s;
+}
+.login-form :deep(.el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.3) inset;
+}
+.login-form :deep(.is-focus.el-input__wrapper) {
+  box-shadow: 0 0 0 2px var(--el-color-primary) inset !important;
+  background: rgba(255,255,255,0.15) !important;
+}
+.login-form :deep(.el-input__inner) { color: #fff; font-weight: 500; }
+.login-form :deep(.el-input__inner::placeholder) { color: rgba(255,255,255,0.4); }
+.login-form :deep(.el-input__prefix) { color: rgba(255,255,255,0.5); }
+.login-button {
+  width: 100%; height: 48px; margin-top: 4px;
+  font-size: 16px; font-weight: 700; letter-spacing: 4px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--el-color-primary), #533483);
+  border: none;
+  transition: transform .15s, box-shadow .2s;
+}
+.login-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px -8px var(--el-color-primary);
+}
 .login-button:active { transform: translateY(0); }
-.card-footer { padding: 16px 32px 20px; border-top: 1px solid #ebeef5; }
-.footer-text { margin: 0; font-size: 12px; color: #c0c4cc; text-align: center; }
-@media (max-width: 480px) {
-  .login-page { padding: 16px; }
-  .card-header { padding: 24px 24px 0; }
-  .card-body { padding: 24px 24px 16px; }
-  .card-footer { padding: 12px 24px 16px; }
+.footer-text {
+  text-align: center; margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px; color: rgba(255,255,255,0.3);
+  letter-spacing: 1px;
 }
 </style>
