@@ -75,17 +75,19 @@ const readAuth = () => {
           token: 'dev-mock-token',
           perms: [
             'view_dashboard','manage_users','view_customers','view_banks','view_accounts',
-            'view_transactions','view_transactions_stats','view_fx','expenses:list','expenses:create','expenses:update','expenses:delete'
+            'view_transactions','view_transactions_stats','view_fx',
+            'buyfx:view','buyfx:create','buyfx:update','buyfx:delete',
+            'expenses:list','expenses:create','expenses:update','expenses:delete'
           ],
-          user: { id: 1, username: 'admin', display_name: '开发者账户' }
+          user: { id: 1, username: 'admin', display_name: '开发者账户', is_admin: true }
         }
         sessionStorage.setItem('auth_user', JSON.stringify(data))
       }
     }
 
-    if (!data) return { token: null, perms: [] }
-    return { token: data.token, perms: data.perms || [], must_change_password: !!data.must_change_password }
-  } catch { return { token: null, perms: [] } }
+    if (!data) return { token: null, perms: [], user: null }
+    return { token: data.token, perms: data.perms || [], must_change_password: !!data.must_change_password, user: data.user || null }
+  } catch { return { token: null, perms: [], user: null } }
 }
 
 // 计算一个用户可访问的首个页面，避免因权限不足跳转到自身而循环
@@ -105,11 +107,13 @@ function firstAllowed(perms) {
 router.beforeEach((to, from, next) => {
   // 恢复登录验证逻辑
   if (to.meta.public) return next()
-  const { token, perms, must_change_password } = readAuth()
+  const { token, perms, must_change_password, user } = readAuth()
   if (!token) return next({ name: 'login', query: { redirect: to.fullPath } })
   if (must_change_password && to.name !== 'change-password') return next({ name: 'change-password' })
   const need = to.meta.perm
   if (need && !perms.includes(need)) {
+    // 管理员直接放行（与 useAuth.has() 一致：admin 无需逐项授权）
+    if (user?.is_admin) return next()
     // 若存在替代授权（工作台独立导航授权），且用户具备其中任意一个，则允许访问
     const alt = ALT_ROUTE_PERMS[to.name]
     if (Array.isArray(alt) && alt.some(a => perms.includes(a))) {

@@ -13,6 +13,13 @@ const state = reactive({
     "view_transactions",
     "view_fx",          // FX 管理查看
     "buyfx:view",       // 购汇查看
+    "buyfx:create",
+    "buyfx:update",
+    "buyfx:delete",
+    "expenses:list",
+    "expenses:create",
+    "expenses:update",
+    "expenses:delete",
     "view_settings",
     "view_account_management"
   ]
@@ -57,13 +64,15 @@ function load() {
       sessionStorage.setItem("auth_user", raw)
     }
   } catch {
-  // 如果解析失败，兜底为本地开发账号（包含 view_fx / buyfx:view）
+  // 如果解析失败，兜底为本地开发账号（包含 view_fx / buyfx:view / expenses:list）
     const devUser = {
       token: "dev-mock-token",
       user: { id: 1, username: "admin", display_name: "开发者账户", is_admin: true },
       perms: [
         "view_dashboard","manage_users","view_customers","view_banks","view_accounts",
-  "view_transactions","view_fx","buyfx:view","view_settings","view_account_management"
+  "view_transactions","view_fx","buyfx:view","buyfx:create","buyfx:update","buyfx:delete",
+  "expenses:list","expenses:create","expenses:update","expenses:delete",
+  "view_settings","view_account_management"
       ]
     }
     sessionStorage.setItem("auth_user", JSON.stringify(devUser))
@@ -105,13 +114,15 @@ function logout() {
   const isDev = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) ||
     (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname))
   if (isDev) {
-  // 开发模式：登出后重新设置为开发者账户（包含 view_fx / buyfx:view）
+  // 开发模式：登出后重新设置为开发者账户（包含 view_fx / buyfx:view / expenses:list）
     const devUser = {
       token: "dev-mock-token",
       user: { id: 1, username: "admin", display_name: "开发者账户", is_admin: true },
       perms: [
         "view_dashboard","manage_users","view_customers","view_banks","view_accounts",
-  "view_transactions","view_fx","buyfx:view","view_settings","view_account_management"
+  "view_transactions","view_fx","buyfx:view","buyfx:create","buyfx:update","buyfx:delete",
+  "expenses:list","expenses:create","expenses:update","expenses:delete",
+  "view_settings","view_account_management"
       ]
     }
     sessionStorage.setItem("auth_user", JSON.stringify(devUser))
