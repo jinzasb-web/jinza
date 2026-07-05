@@ -20,7 +20,7 @@ if (connectionString) {
   pool = new Pool({
     connectionString,
     // Enable SSL on managed Postgres (Railway usually supports no-verify)
-    ssl: process.env.PGSSLMODE === 'disable' ? false : { rejectUnauthorized: false },
+    ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT || 5000),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT || 30000),
     max: Number(process.env.PG_MAX_CLIENTS || 10),
