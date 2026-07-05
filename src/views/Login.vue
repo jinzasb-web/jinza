@@ -1,43 +1,88 @@
 <template>
-  <div class="login-page compact" :class="{ 'with-video': enableVideo }">
-    <div class="video-bg" v-if="enableVideo">
-      <video ref="bgVideo" class="bg-video" :src="videoSrc" autoplay muted loop playsinline preload="auto"
-             @canplay="onVideoReady" @error="onVideoError"></video>
-      <div class="video-overlay"></div>
+  <div class="login-page">
+    <div class="login-bg">
+      <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+      </div>
     </div>
     <div class="login-container">
-      <div class="single-panel">
-        <div class="lang-toggle" aria-label="language switch">
-          <span :class="{active: locale.value==='zh'}" @click="setLang('zh')">CN</span>
-          <span class="sep">|</span>
-          <span :class="{active: locale.value==='en'}" @click="setLang('en')">EN</span>
-        </div>
-        <div class="logo-mini">{{ t('app.title') }}</div>
-        <el-form @submit.prevent="onSubmit" class="login-form" label-position="top">
-          <el-form-item :label="t('login.username')">
-            <el-input v-model.trim="form.username" :placeholder="t('login.username')" size="large" autofocus @keyup.enter="focusPassword">
-              <template #prefix><el-icon><User /></el-icon></template>
-            </el-input>
-          </el-form-item>
-          <el-form-item :label="t('login.password')">
-            <el-input ref="passwordInput" v-model.trim="form.password" type="password" show-password size="large" :placeholder="t('login.password')" @keyup.enter="onSubmit">
-              <template #prefix><el-icon><Lock /></el-icon></template>
-            </el-input>
-          </el-form-item>
-          <div class="login-options">
-            <el-checkbox v-model="remember">{{ rememberLabel }}</el-checkbox>
+      <div class="login-card">
+        <div class="card-header">
+          <div class="brand">
+            <div class="brand-icon">
+              <svg viewBox="0 0 40 40" width="40" height="40" fill="none">
+                <rect width="40" height="40" rx="10" fill="var(--el-color-primary)"/>
+                <text x="20" y="26" text-anchor="middle" fill="#fff" font-size="20" font-weight="700" font-family="system-ui">J</text>
+              </svg>
+            </div>
+            <div class="brand-text">
+              <h1 class="brand-name">JINZA</h1>
+              <p class="brand-subtitle">{{ t('app.subtitle') || 'Enterprise Management' }}</p>
+            </div>
           </div>
-          <el-button type="primary" :loading="submitting" @click="onSubmit" class="login-button" size="large" round>
-            {{ t('login.submit') }}
-          </el-button>
-        </el-form>
+          <div class="lang-toggle">
+            <el-switch
+              :model-value="locale.value === 'en'"
+              :active-text="'EN'"
+              :inactive-text="'中文'"
+              inline-prompt
+              size="small"
+              @change="v => setLang(v ? 'en' : 'zh')"
+            />
+          </div>
+        </div>
+
+        <div class="card-body">
+          <h2 class="welcome-title">{{ t('login.welcome') }}</h2>
+          <p class="welcome-desc">{{ t('login.pleaseSignIn') }}</p>
+
+          <el-form @submit.prevent="onSubmit" class="login-form" label-position="top">
+            <el-form-item :label="t('login.username')">
+              <el-input
+                v-model.trim="form.username"
+                :placeholder="t('login.usernamePlaceholder') || t('login.username')"
+                size="large"
+                autofocus
+                @keyup.enter="focusPassword"
+              >
+                <template #prefix><el-icon><User /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <el-form-item :label="t('login.password')">
+              <el-input
+                ref="passwordInput"
+                v-model.trim="form.password"
+                type="password" show-password size="large"
+                :placeholder="t('login.passwordPlaceholder') || t('login.password')"
+                @keyup.enter="onSubmit"
+              >
+                <template #prefix><el-icon><Lock /></el-icon></template>
+              </el-input>
+            </el-form-item>
+
+            <div class="login-options">
+              <el-checkbox v-model="remember">{{ t('login.rememberMe') }}</el-checkbox>
+            </div>
+
+            <el-button type="primary" :loading="submitting" @click="onSubmit" class="login-button" size="large">
+              {{ t('login.submit') }}
+            </el-button>
+          </el-form>
+        </div>
+
+        <div class="card-footer">
+          <p class="footer-text">JINZA Trading Sdn. Bhd. &copy; {{ new Date().getFullYear() }}</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '@/api'
 import { useAuth } from '@/composables/useAuth'
@@ -47,42 +92,39 @@ import { User, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
-
 const form = ref({ username: '', password: '' })
 const remember = ref(true)
 const submitting = ref(false)
 const passwordInput = ref(null)
 const { t, locale } = useI18n()
-// 记住我标签：中文界面仅中文，英文界面仅英文
-const rememberLabel = computed(()=> t('login.rememberMe'))
 const { save } = useAuth()
 
-function setLang(value){
-  if(locale.value===value) return
+function setLang(value) {
+  if (locale.value === value) return
   locale.value = value
   sessionStorage.setItem('lang', value)
   localStorage.setItem('lang', value)
 }
 
-const focusPassword = () => { passwordInput.value && passwordInput.value.focus() }
+const focusPassword = () => { passwordInput.value?.focus() }
 
 const onSubmit = async () => {
-  if(!form.value.username || !form.value.password){
-    ElMessage({ message: t('login.errors.missingCredentials'), type:'warning', duration:2000 })
+  if (!form.value.username || !form.value.password) {
+    ElMessage({ message: t('login.errors.missingCredentials'), type: 'warning', duration: 2000 })
     return
   }
   submitting.value = true
   try {
     const res = await api.login(form.value.username, form.value.password)
-    save({ token:res.token, user:res.user, perms:res.perms, must_change_password:!!res.must_change_password }, remember.value)
+    save({ token: res.token, user: res.user, perms: res.perms, must_change_password: !!res.must_change_password }, remember.value)
     const redirect = res.must_change_password ? '/change-password' : (route.query.redirect || '/')
     if (res.must_change_password) {
-      ElMessage({ message: t('login.firstLoginTip'), type:'warning', duration:1800 })
+      ElMessage({ message: t('login.firstLoginTip'), type: 'warning', duration: 1800 })
     } else {
-      ElMessage({ message: t('login.successEntering'), type:'success', duration:1500 })
+      ElMessage({ message: t('login.successEntering'), type: 'success', duration: 1500 })
     }
-    setTimeout(()=>{ window.location.href = redirect === '/' ? '/' : String(redirect) }, 500)
-  } catch(e){
+    setTimeout(() => { window.location.href = redirect === '/' ? '/' : String(redirect) }, 500)
+  } catch (e) {
     const code = e?.code
     let text = ''
     if (code === 'MISSING_CREDENTIALS') text = t('login.errors.missingCredentials')
@@ -90,52 +132,89 @@ const onSubmit = async () => {
     else if (code === 'USER_DISABLED') text = t('login.errors.userDisabled')
     else if (code === 'INVALID_PASSWORD') text = t('login.errors.invalidPassword')
     else {
-      // 兼容旧服务：尝试解析 message 为 JSON 或使用原始 message
       try { const data = JSON.parse(e.message); text = data?.error || data?.message || '' } catch { text = e?.message || '' }
     }
-  if (!text) text = t('login.errors.defaultError')
-  ElMessage({ message: t('login.failedWithMsg', { msg: text }), type:'error', duration:3200 })
+    if (!text) text = t('login.errors.defaultError')
+    ElMessage({ message: t('login.failedWithMsg', { msg: text }), type: 'error', duration: 3200 })
   } finally { submitting.value = false }
 }
-
-onMounted(()=>{})
-const videoSrc = 'https://cdn.marmot-cloud.com/storage/intl_website/2025/07/03/EW8bvlo/globe.mp4'
-const bgVideo = ref(null)
-const enableVideo = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-function onVideoReady(){}
-function onVideoError(){}
 </script>
 
 <style scoped>
-.video-bg { position:fixed; inset:0; overflow:hidden; z-index:0; }
-.bg-video { width:100%; height:100%; object-fit:cover; filter:brightness(.52) saturate(1.15); }
-.video-overlay { position:absolute; inset:0; background:radial-gradient(circle at 35% 40%, rgba(255,255,255,0.15), rgba(0,0,0,0.70)); backdrop-filter: blur(2px); }
-.login-page { position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:30px 20px; }
-.login-container { position:relative; z-index:2; width:100%; max-width:480px; }
-.single-panel { position:relative; width:100%; padding:38px 36px 44px; border-radius:30px; background:rgba(255,255,255,0.065); backdrop-filter:blur(28px) saturate(1.9); -webkit-backdrop-filter:blur(28px) saturate(1.9); box-shadow:0 8px 42px -10px rgba(0,0,0,0.55), 0 2px 6px -2px rgba(0,0,0,0.4); overflow:hidden; }
-.single-panel:before { content:""; position:absolute; inset:0; background:linear-gradient(140deg,rgba(255,255,255,0.20),rgba(255,255,255,0.04) 60%,rgba(255,255,255,0.15)); pointer-events:none; }
-.single-panel:after { content:""; position:absolute; inset:0; border:1px solid rgba(255,255,255,0.25); border-radius:30px; pointer-events:none; mix-blend-mode:overlay; }
-.logo-mini { font-size:18px; font-weight:700; letter-spacing:.5px; color:#fff; opacity:.92; margin-bottom:14px; text-shadow:0 2px 6px rgba(0,0,0,0.4); text-align:center; width:100%; }
-.login-header, .welcome-text, .login-subtext { display:none; }
-.login-form { display:flex; flex-direction:column; gap:18px; }
-.login-form :deep(.el-form-item__label){ color:#fff; font-weight:600; letter-spacing:.5px; font-size:13px; }
-.login-form :deep(.el-input__wrapper){ background:rgba(255,255,255,0.22) !important; box-shadow:0 0 0 1px rgba(255,255,255,0.30) inset, 0 2px 4px -1px rgba(0,0,0,0.35); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border-radius:14px; transition:box-shadow .25s, background .25s; }
-.login-form :deep(.el-input__wrapper:hover){ box-shadow:0 0 0 1px rgba(255,255,255,0.55) inset, 0 2px 6px -1px rgba(0,0,0,0.45); }
-.login-form :deep(.is-focus.el-input__wrapper){ box-shadow:0 0 0 2px rgba(var(--el-color-primary-rgb),.85) inset, 0 3px 10px -2px rgba(var(--el-color-primary-rgb),.55); background:rgba(255,255,255,0.30) !important; }
-.login-form :deep(.el-input__inner){ color:#fff; font-weight:600; letter-spacing:.5px; }
-.login-form :deep(.el-input__prefix){ color:#fff; }
-.login-form :deep(.el-checkbox__label){ color:#fff; font-weight:500; }
-.login-options { display:flex; justify-content:space-between; align-items:center; margin:0; }
-.login-button { width:100%; height:48px; margin-top:4px; font-size:15px; font-weight:700; letter-spacing:1px; background:linear-gradient(135deg,var(--el-color-primary), var(--el-color-primary-dark-2)); border:none; box-shadow:0 6px 18px -4px rgba(0,0,0,0.55), 0 2px 6px -2px rgba(0,0,0,0.4); transition:transform .2s, filter .2s; }
-.login-button:hover { filter:brightness(1.08); }
-.login-button:active { transform:translateY(1px); }
-.login-footer, .system-info, .lang-selector { display:none !important; }
-.lang-toggle { position:absolute; top:14px; right:18px; font-size:12px; font-weight:600; letter-spacing:.5px; color:rgba(255,255,255,0.55); user-select:none; display:flex; align-items:center; gap:6px; }
-.lang-toggle span { cursor:pointer; transition:color .25s, text-shadow .25s; }
-.lang-toggle span.active { color:#fff; text-shadow:0 0 6px rgba(255,255,255,0.6); }
-.lang-toggle .sep { opacity:.4; cursor:default; }
-.with-video .single-panel { animation: panelFadeIn .9s cubic-bezier(.22,.98,.34,1.02) both; }
-@keyframes panelFadeIn { 0% { opacity:0; transform:translateY(34px) scale(.97); } 55% { opacity:1; transform:translateY(0) scale(1.01);} 100% { opacity:1; transform:translateY(0) scale(1);} }
-@media (max-width:600px){ .single-panel { padding:34px 28px 40px; border-radius:26px; } .welcome-text{ font-size:26px; } }
-@media (max-width:420px){ .single-panel { padding:30px 22px 36px; } .welcome-text{ font-size:24px; } }
+.login-page {
+  position: relative; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  padding: 24px; overflow: hidden;
+}
+.login-bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.bg-shapes { position: absolute; inset: 0; }
+.shape {
+  position: absolute; border-radius: 50%; opacity: 0.15;
+}
+.shape-1 {
+  width: 600px; height: 600px; top: -150px; right: -100px;
+  background: radial-gradient(circle, #fff 0%, transparent 70%);
+  animation: float 12s ease-in-out infinite;
+}
+.shape-2 {
+  width: 400px; height: 400px; bottom: -80px; left: -80px;
+  background: radial-gradient(circle, #fff 0%, transparent 70%);
+  animation: float 16s ease-in-out infinite reverse;
+}
+.shape-3 {
+  width: 250px; height: 250px; top: 40%; left: 60%;
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+  animation: float 10s ease-in-out infinite 2s;
+}
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+.login-container {
+  position: relative; z-index: 1; width: 100%; max-width: 420px;
+  animation: cardEnter 0.6s cubic-bezier(.22,.98,.34,1.02) both;
+}
+@keyframes cardEnter {
+  0% { opacity: 0; transform: translateY(24px) scale(.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.login-card {
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 20px 60px -12px rgba(0,0,0,.25), 0 4px 18px -6px rgba(0,0,0,.15);
+  overflow: hidden;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between; padding: 28px 32px 0;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { flex-shrink: 0; }
+.brand-name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #303133; line-height: 1.2; }
+.brand-subtitle { margin: 2px 0 0; font-size: 12px; color: #909399; }
+.lang-toggle { flex-shrink: 0; }
+.card-body { padding: 28px 32px 20px; }
+.welcome-title { margin: 0 0 4px; font-size: 20px; font-weight: 700; color: #303133; }
+.welcome-desc { margin: 0 0 24px; font-size: 14px; color: #909399; }
+.login-form { display: flex; flex-direction: column; gap: 18px; }
+.login-form :deep(.el-form-item) { margin-bottom: 0; }
+.login-form :deep(.el-form-item__label) { font-size: 13px; font-weight: 600; color: #303133; padding-bottom: 4px; }
+.login-form :deep(.el-input__wrapper) { border-radius: 10px; box-shadow: 0 0 0 1px #dcdfe6 inset; transition: box-shadow .2s; }
+.login-form :deep(.el-input__wrapper:hover) { box-shadow: 0 0 0 1px #409eff inset; }
+.login-form :deep(.is-focus.el-input__wrapper) { box-shadow: 0 0 0 2px #409eff inset !important; }
+.login-form :deep(.el-input__inner) { font-weight: 500; }
+.login-form :deep(.el-input__prefix) { color: #c0c4cc; }
+.login-options { display: flex; justify-content: space-between; align-items: center; margin: 2px 0; }
+.login-button { width: 100%; height: 46px; font-size: 15px; font-weight: 700; letter-spacing: .5px; border-radius: 10px; margin-top: 4px; transition: transform .15s, box-shadow .2s; }
+.login-button:hover { transform: translateY(-1px); box-shadow: 0 6px 20px -6px #409eff; }
+.login-button:active { transform: translateY(0); }
+.card-footer { padding: 16px 32px 20px; border-top: 1px solid #ebeef5; }
+.footer-text { margin: 0; font-size: 12px; color: #c0c4cc; text-align: center; }
+@media (max-width: 480px) {
+  .login-page { padding: 16px; }
+  .card-header { padding: 24px 24px 0; }
+  .card-body { padding: 24px 24px 16px; }
+  .card-footer { padding: 12px 24px 16px; }
+}
 </style>
