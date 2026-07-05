@@ -22,16 +22,7 @@
               <p class="brand-subtitle">{{ t('app.subtitle') || 'Enterprise Management' }}</p>
             </div>
           </div>
-          <div class="lang-toggle">
-            <el-switch
-              :model-value="locale.value === 'en'"
-              :active-text="'EN'"
-              :inactive-text="'中文'"
-              inline-prompt
-              size="small"
-              @change="v => setLang(v ? 'en' : 'zh')"
-            />
-          </div>
+
         </div>
 
         <div class="card-body">
@@ -62,7 +53,7 @@
         </div>
 
         <div class="card-footer">
-          <p class="footer-text">JINZA Trading Sdn. Bhd. &copy; {{ new Date().getFullYear() }}</p>
+          <p class="footer-text">JINZA TRADING SDN. BHD. &copy; {{ new Date().getFullYear() }}</p>
         </div>
       </div>
     </div>
@@ -84,15 +75,8 @@ const form = ref({ username: '', password: '' })
 const remember = ref(true)
 const submitting = ref(false)
 const passwordInput = ref(null)
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const { save } = useAuth()
-
-function setLang(value) {
-  if (locale.value === value) return
-  locale.value = value
-  sessionStorage.setItem('lang', value)
-  localStorage.setItem('lang', value)
-}
 
 const focusPassword = () => { passwordInput.value?.focus() }
 
@@ -181,7 +165,7 @@ const onSubmit = async () => {
 .brand-icon { flex-shrink: 0; }
 .brand-name { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #303133; line-height: 1.2; }
 .brand-subtitle { margin: 2px 0 0; font-size: 12px; color: #909399; }
-.lang-toggle { flex-shrink: 0; }
+
 .card-body { padding: 28px 32px 20px; }
 .welcome-title { margin: 0 0 4px; font-size: 20px; font-weight: 700; color: #303133; }
 .welcome-desc { margin: 0 0 24px; font-size: 14px; color: #909399; }
