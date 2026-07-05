@@ -129,7 +129,7 @@ const onSubmit = async () => {
 }
 .card-body { padding: 40px 36px 36px; }
 .brand-section { text-align:center; margin-bottom:32px; }
-.brand-logo { width:100px; height:auto; margin-bottom:16px; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3)); }
+.brand-logo { width:100px; height:auto; margin-bottom:16px; background:rgba(255,255,255,0.95); padding:12px; border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.25); }
 .brand-name { margin:0; font-size:16px; font-weight:700; letter-spacing:1px; color:rgba(255,255,255,.9); }
 .brand-subtitle { margin:6px 0 0; font-size:13px; color:#8daf50; letter-spacing:2px; font-weight:600; }
 .login-form { display:flex; flex-direction:column; gap:16px; }
