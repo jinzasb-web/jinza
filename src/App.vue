@@ -2,8 +2,8 @@
   <div class="app">
     <!-- 顶部导航栏，仅在非登录页时显示 -->
     <el-header v-if="!isLogin" height="56px" class="topbar">
-      <div class="left-spacer">
-        <!-- 左侧留空区域 -->
+      <div class="left-logo">
+        <img src="/logo.png" class="topbar-logo" alt="JINZA" />
       </div>
       
       <!-- 居中的导航菜单 - 自动延伸 -->
@@ -58,13 +58,8 @@
         </el-menu>
       </div>
       
-      <!-- 语言切换移至最右侧 -->
+      <!-- 右侧操作区 -->
       <div class="right">
-        <div class="lang-switch" role="group" aria-label="Language switch">
-          <button type="button" class="lang" :class="{ active: lang === 'zh' }" @click="setLang('zh')">中文</button>
-          <span class="sep">|</span>
-          <button type="button" class="lang" :class="{ active: lang === 'en' }" @click="setLang('en')">English</button>
-        </div>
         <button v-if="authed" type="button" class="logout" @click="logout" aria-label="Logout">{{ t('app.logout') }}</button>
       </div>
     </el-header>
@@ -174,15 +169,25 @@ function handleSelect(key) {
   justify-content: space-between;
   padding: 0 16px;
   /* 更稳重的深色配色：深蓝灰到略浅渐变 */
-  background: linear-gradient(90deg, #111827 0%, #1f2937 100%);
+  background: linear-gradient(90deg, #0d2f55 0%, #0a2540 100%);
   color: var(--el-color-white);
   box-shadow: 0 2px 10px rgba(0,0,0,.06);
   position: sticky;
   top: 0;
   z-index: 2020; /* 高于下拉/弹层(2000)，低于对话框(2001+) */
 }
-.left-spacer {
-  flex: 0 0 40px; /* 左侧留白较小 */
+.left-logo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+.topbar-logo {
+  height: 32px;
+  width: auto;
+  background: #fff;
+  border-radius: 6px;
+  padding: 2px;
 }
 .nav-menu {
   flex: 1;
@@ -263,20 +268,6 @@ function handleSelect(key) {
   outline-offset: -2px;
   box-shadow: none;
 }
-
-/* 语言切换样式 */
-.lang-switch { display: inline-flex; align-items: center; user-select: none; }
-.lang-switch .sep { margin: 0 8px; color: rgba(255,255,255,0.6); }
-.lang-switch .lang {
-  background: transparent;
-  border: none;
-  padding: 4px 6px;
-  color: rgba(255,255,255,0.85);
-  cursor: pointer;
-  font-weight: 600;
-}
-.lang-switch .lang:hover { color: #fff; text-decoration: underline; }
-.lang-switch .lang.active { color: #fff; font-weight: 800; }
 
 /* 顶部栏注销按钮（与白色文字背景协调） */
 .logout {
