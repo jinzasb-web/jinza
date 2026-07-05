@@ -40,25 +40,13 @@
 
           <el-form @submit.prevent="onSubmit" class="login-form" label-position="top">
             <el-form-item :label="t('login.username')">
-              <el-input
-                v-model.trim="form.username"
-                :placeholder="t('login.usernamePlaceholder') || t('login.username')"
-                size="large"
-                autofocus
-                @keyup.enter="focusPassword"
-              >
+              <el-input v-model.trim="form.username" :placeholder="t('login.usernamePlaceholder') || t('login.username')" size="large" autofocus @keyup.enter="focusPassword">
                 <template #prefix><el-icon><User /></el-icon></template>
               </el-input>
             </el-form-item>
 
             <el-form-item :label="t('login.password')">
-              <el-input
-                ref="passwordInput"
-                v-model.trim="form.password"
-                type="password" show-password size="large"
-                :placeholder="t('login.passwordPlaceholder') || t('login.password')"
-                @keyup.enter="onSubmit"
-              >
+              <el-input ref="passwordInput" v-model.trim="form.password" type="password" show-password size="large" :placeholder="t('login.passwordPlaceholder') || t('login.password')" @keyup.enter="onSubmit">
                 <template #prefix><el-icon><Lock /></el-icon></template>
               </el-input>
             </el-form-item>
