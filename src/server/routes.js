@@ -272,7 +272,8 @@ router.get('/system/tables', auth.authMiddleware(true), async (req, res) => {
       let rows = Number(r.est_rows||0)
       if (exact) {
         try {
-          const cnt = await query(`select count(*) from ${r.name}`)
+          // Use quote_ident for safe table name quoting
+          const cnt = await query(`select count(*) from "${r.name.replace(/"/g, '
           rows = Number(cnt.rows?.[0]?.count||0)
         } catch {}
       }
@@ -307,9 +308,13 @@ router.post('/system/backup', auth.authMiddleware(true), async (req, res) => {
   const meta = { time: new Date().toISOString(), user: req.user?.username||null, tables: pick }
     archive.append(JSON.stringify(meta,null,2), { name: 'meta.json' })
     // dump each table
+    const allowedTables = new Set(all || [])
+    const sqlSafeTable = (name) => allowedTables.has(name) ? `"${name}"` : null
     for (const t of pick) {
       try {
-        const rs = await query(`select * from ${t}`)
+        const safe = sqlSafeTable(t)
+        if (!safe) continue
+        const rs = await query(`select * from ${safe}`)
         const text = JSON.stringify({ name: t, count: rs.rowCount, rows: rs.rows })
         archive.append(text, { name: `tables/${t}.json` })
       } catch (e) {
@@ -390,9 +395,10 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
 
     // 强制 truncate with cascade
     {
-      const toTruncate = order.map(n=>`"${n}"`).join(',')
-      if (toTruncate) {
-        await query(`truncate table ${toTruncate} restart identity cascade`)
+      const allowedTables = new Set(all)
+      const safeTruncate = order.filter(n => allowedTables.has(n)).map(n => `"${n}"`).join(',')
+      if (safeTruncate) {
+        await query(`truncate table ${safeTruncate} restart identity cascade`)
       }
     }
 
@@ -410,10 +416,12 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
       const colsSet = new Set(colsRs.rows.map(r=>r.column_name))
       const keys = Array.from(new Set(rows.flatMap(r=>Object.keys(r)))).filter(k=>colsSet.has(k))
       if (!keys.length) continue
+      const safeTbl = allowedTables.has(tbl) ? `"${tbl}"` : null
+      if (!safeTbl) continue
       for (const r of rows) {
         const vals = keys.map(k => r[k] === undefined ? null : r[k])
         const placeholders = keys.map((_,i)=>`$${i+1}`).join(',')
-        const sql = `insert into ${tbl}(${keys.map(k=>`"${k}"`).join(',')}) values(${placeholders})`
+        const sql = `insert into ${safeTbl}(${keys.map(k=>`"${k}"`).join(',')}) values(${placeholders})`
         try { await query(sql, vals); inserted++ } catch (e) { failed++ }
       }
     }

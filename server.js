@@ -3,6 +3,8 @@ import 'express-async-errors'
 import path from 'path'
 import fs from 'fs'
 import cors from 'cors'
+import compression from 'compression'
+import rateLimit from 'express-rate-limit'
 import { fileURLToPath } from 'url'
 import { router as apiRouter } from './src/server/routes.js'
 import { scheduleBackups } from './src/server/backup_automation.js'
@@ -85,14 +87,27 @@ app.use(express.json({ limit: '10mb' }))
 // 信任反向代理（获取真实 IP 用于审计/限流）
 try { app.set('trust proxy', 1) } catch {}
 
-// 基础安全响应头（不引入依赖，避免破坏构建）
+// gzip 压缩响应
+app.use(compression({ level: 6, threshold: 1024 }))
+
+// 基础安全响应头
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('X-Frame-Options', 'SAMEORIGIN')
   res.setHeader('Referrer-Policy', 'no-referrer')
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'")
   next()
+})
+
+// 登录 API 频率限制：每 IP 每分钟最多 10 次尝试
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '登录尝试过于频繁，请稍后再试', code: 'RATE_LIMITED' }
 })
 
 // Serve runtime uploads (e.g., bank logos) — use persistent DATA_DIR when available
@@ -119,7 +134,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() })
 })
 
-// API routes
+// API routes — 登录接口附加频率限制
+app.use('/api/auth/login', loginLimiter)
 app.use('/api', apiRouter)
 
 // Serve built front-end when dist exists or in production (for PaaS like Render)

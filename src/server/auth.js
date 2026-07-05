@@ -2,7 +2,11 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { query } from './db.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  const warn = '⚠️ WARNING: JWT_SECRET not set! Using insecure default! Set JWT_SECRET in production immediately.'
+  console.error(warn)
+  return 'dev-secret-change-me'
+})()
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 export function signToken(payload) {
