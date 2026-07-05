@@ -49,6 +49,7 @@ const messages = {
       save: '保存',
   exportFailed: '导出失败',
     noData: '暂无数据',
+      empty: '暂无数据',
       approve: '审核',
       revoke: '撤销',
       reject: '驳回',
@@ -132,16 +133,12 @@ const messages = {
     balance: '余额',
       errors: {
         loadFailed: '加载失败'
-      }
-  ,historyDate: '日期',
-  platform: '平台',
-  sellCurrency: '卖出币种',
-  sellAmount: '卖出金额',
-  rate: '汇率',
-  buyCurrency: '买入币种',
-  buyAmount: '买入金额',
-  fromBalance: '卖出币种余额',
-  toBalance: '买入币种余额'
+      },
+      historyDate: '日期',
+      sellCurrency: '卖出币种',
+      buyAmount: '买入金额',
+      fromBalance: '卖出币种余额',
+      toBalance: '买入币种余额'
   },
   customers: {
       title: '客户管理',
@@ -814,6 +811,9 @@ const messages = {
   },
   fx: {
       title: '结汇管理',
+      errExceedBalance: '金额超过余额',
+      errNothingToSettle: '无可结汇金额',
+      errRateRequired: '请输入有效汇率',
       settlementArea: '结汇区',
       paymentArea: '付款区',
       viewHistory: '查看单据',

@@ -7,7 +7,7 @@
 
     <el-card shadow="never" class="card--plain">
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
-        <el-input v-model="q" :placeholder="$t('expenses.searchPlaceholder')" style="width:260px" clearable @clear="loadList" @keyup.enter.native="loadList" />
+        <el-input v-model="q" :placeholder="$t('expenses.searchPlaceholder')" style="width:260px" clearable @clear="loadList" @keyup.enter="loadList" />
         <el-select v-model="cate" :placeholder="$t('expenses.category')" clearable style="width:200px">
           <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
         </el-select>
