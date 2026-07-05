@@ -5,6 +5,7 @@ import './styles.css'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import { i18n } from './i18n'
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import Tilt from './directives/tilt'
 
 // 强制使用亮色主题
@@ -16,7 +17,7 @@ const app = createApp(App)
 app.use(router)
 app.use(i18n)
 // 统一 Element Plus 全局尺寸与层级，确保视觉密度一致
-app.use(ElementPlus, { size: 'small', zIndex: 3000 })
+app.use(ElementPlus, { size: 'small', zIndex: 3000, locale: zhCn })
 app.directive('tilt', Tilt)
 // 按需注册用到的图标组件
 app.component('User', User)
