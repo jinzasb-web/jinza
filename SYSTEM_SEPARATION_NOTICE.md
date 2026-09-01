@@ -327,7 +327,7 @@ cd jinza-system
 
 **业务咨询 / Business Inquiry**:
 - JINZA Trading Sdn. Bhd.
-- Email: info@jinzatrading.com
+- Email: info@jinza.com.my
 
 ---
 

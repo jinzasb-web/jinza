@@ -183,4 +183,4 @@ jinza web/
 
 ---
 
-For questions or assistance, contact: jinza.sb@gmail.com
+For questions or assistance, contact: info@jinza.com.my

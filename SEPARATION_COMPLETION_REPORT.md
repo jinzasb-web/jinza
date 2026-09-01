@@ -424,7 +424,7 @@ SEO 分数:  预计提升 15-20分
 ### 业务咨询 / Business Inquiry
 
 **JINZA Trading Sdn. Bhd.**
-- Email: info@jinzatrading.com
+- Email: info@jinza.com.my
 - WeChat: (扫描网站二维码)
 - Website: [Your production URL]
 
