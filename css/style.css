@@ -120,20 +120,6 @@ ul {
     transform: translateY(-2px);
 }
 
-.btn-whatsapp {
-    background: #25d366;
-    color: var(--white);
-    border-color: #25d366;
-}
-
-.btn-whatsapp:hover {
-    background: #1ebe5d;
-    border-color: #1ebe5d;
-    color: var(--white);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37, 211, 102, 0.35);
-}
-
 /* =========================================
    Navbar
    ========================================= */
@@ -655,12 +641,9 @@ ul {
 /* =========================================
    Contact
    ========================================= */
-.contact-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.8rem;
-    max-width: 980px;
-    margin: 0 auto 2.5rem;
+.contact-single {
+    max-width: 560px;
+    margin: 0 auto;
 }
 
 .contact-card {
@@ -675,12 +658,21 @@ ul {
     transition: var(--transition);
 }
 
-.contact-card-btn {
-    font-family: inherit;
-    font-size: 1rem;
-    cursor: pointer;
-    color: inherit;
-    width: 100%;
+.contact-card-email {
+    padding: 3rem 2.5rem;
+    box-shadow: var(--shadow);
+}
+
+.email-big {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 1.2rem;
+    word-break: break-all;
+}
+
+.email-big:hover {
+    color: var(--accent);
 }
 
 .contact-card:hover {
@@ -724,34 +716,6 @@ ul {
 
 .contact-card:hover .contact-link {
     gap: 0.9rem;
-}
-
-.social-row {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.social-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    background: var(--white);
-    border: 1px solid #e6edf3;
-    color: var(--primary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    transition: var(--transition);
-}
-
-.social-icon:hover {
-    background: var(--primary);
-    color: var(--white);
-    transform: translateY(-3px);
-    box-shadow: var(--shadow);
 }
 
 /* =========================================
@@ -822,81 +786,6 @@ ul {
     color: var(--accent);
     font-weight: 600;
     letter-spacing: 1px;
-}
-
-/* =========================================
-   WeChat Modal
-   ========================================= */
-.wechat-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(10, 30, 50, 0.8);
-    z-index: 2000;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.wechat-modal.show {
-    display: flex;
-}
-
-.wechat-modal-content {
-    background: var(--white);
-    padding: 2.4rem;
-    border-radius: var(--radius);
-    text-align: center;
-    max-width: 400px;
-    width: 100%;
-    position: relative;
-    box-shadow: var(--shadow-lg);
-    animation: modalIn 0.3s ease;
-}
-
-@keyframes modalIn {
-    from { opacity: 0; transform: scale(0.92) translateY(12px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.wechat-close {
-    position: absolute;
-    top: 0.8rem;
-    right: 1.1rem;
-    font-size: 1.8rem;
-    line-height: 1;
-    background: none;
-    border: none;
-    color: var(--text-light);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.wechat-close:hover {
-    color: var(--primary);
-}
-
-.wechat-modal-content h3 {
-    color: var(--text-dark);
-    font-size: 1.2rem;
-    margin-bottom: 1.2rem;
-}
-
-.wechat-qr-image {
-    width: 240px;
-    height: 240px;
-    object-fit: contain;
-    margin: 0 auto 1.2rem;
-    border-radius: 10px;
-    border: 1px solid #e6edf3;
-}
-
-.wechat-modal-content p {
-    color: var(--text-light);
-    font-size: 0.95rem;
 }
 
 /* =========================================
@@ -1154,8 +1043,7 @@ ul {
     }
 
     .category-grid,
-    .process-grid,
-    .contact-grid {
+    .process-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 
@@ -1218,8 +1106,7 @@ ul {
     }
 
     .category-grid,
-    .process-grid,
-    .contact-grid {
+    .process-grid {
         grid-template-columns: 1fr;
     }
 

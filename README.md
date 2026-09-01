@@ -4,7 +4,7 @@
 
 Official corporate website for **JINZA TRADING SDN. BHD.**, a Malaysia-based procurement, wholesale and international trading company providing multi-category sourcing and supply solutions for businesses.
 
-**Version**: 3.1.0 | **Type**: Corporate Showcase | **Status**: 🌐 Production Ready
+**Version**: 3.1.1 | **Type**: Corporate Showcase | **Status**: 🌐 Production Ready
 
 ---
 
@@ -54,10 +54,9 @@ jinza-web/
 ├── css/
 │   └── style.css           # Global stylesheet
 ├── js/
-│   └── script.js           # Site interactions (nav, modal, animations)
+│   └── script.js           # Site interactions (nav, scroll, animations)
 ├── images/
-│   ├── jinza-logo.png      # Company logo
-│   └── wechat-qr.jpg       # WeChat QR code
+│   └── jinza-logo.png      # Company logo
 └── vercel.json             # Vercel static deployment config
 ```
 
@@ -85,15 +84,13 @@ Optimized for **Vercel** static hosting (see `vercel.json`). Also compatible wit
 ## 📞 Contact
 
 - **Email**: info@jinza.com.my
-- **WhatsApp**: +60 16-577 7137
-- **WeChat**: Scan QR code on website
-- **Facebook**: [JINZA Trading](https://www.facebook.com/share/1PABviHwqa/?mibextid=wwXIfr)
-- **Instagram**: [@jinza.sb](https://www.instagram.com/jinza.sb)
-- **TikTok**: [@jinza.trading](https://www.tiktok.com/@jinza.trading)
 
 ## 🗓️ Version History
 
-### Version 3.1.0 (Current)
+### Version 3.1.1 (Current)
+- ✉️ Removed WhatsApp, WeChat and social links — email is now the only contact channel
+
+### Version 3.1.0
 - 🎯 **Refactored** to integrated procurement &amp; wholesale supply positioning
 - 🗂️ Replaced brand microsites with 5 supply category pages
 - ✉️ Contact email updated to info@jinza.com.my
