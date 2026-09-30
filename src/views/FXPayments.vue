@@ -146,7 +146,7 @@ import { api, request as httpRequest } from '@/api'
 import { useTableMemory } from '@/composables/useTableMemory'
 import { useBankLogo } from '@/composables/useBankLogo'
 import { useAuth } from '@/composables/useAuth'
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { has } = useAuth()
 const rows = ref([])
 const total = ref(0)
@@ -185,6 +185,7 @@ async function exportCsv(scope){
   if (scope === 'page') { params.page = page.value; params.pageSize = pageSize; params.scope = 'page' }
   if (qCustomerId.value) params.customerId = qCustomerId.value
   if (Array.isArray(qRange.value) && qRange.value.length === 2) { params.startDate = qRange.value[0]; params.endDate = qRange.value[1] }
+  if (qStatus.value) params.status = qStatus.value
   const csv = await api.fx.payments.exportListCsv(params)
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -249,9 +250,25 @@ async function doUnapprove(row){
   } catch(e) { ElMessage.error(t('fx.unapproveFailed')) }
 }
 
+// 预览 PDF：新标签页打开。先同步开窗，避免 await 之后被浏览器弹窗拦截
+async function previewPdf(row){
+  const id = row.payment_id || row.id
+  const win = window.open('', '_blank')
+  try {
+    const { blob } = await api.fx.payments.exportPdf(id, locale?.value || '')
+    const url = URL.createObjectURL(blob)
+    if (win) win.location.href = url
+    else window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    try { if (win) win.close() } catch {}
+    ElMessage.error(e?.message || t('fx.previewPdf'))
+  }
+}
+
 async function downloadPdf(row){
   const id = row.payment_id || row.id
-  const { blob, filename } = await api.fx.payments.exportPdf(id)
+  const { blob, filename } = await api.fx.payments.exportPdf(id, locale?.value || '')
   const clientName = filename || `${row.bill_no || ('Payment-' + id)}.pdf`
   // 优先尝试文件保存对话框（受浏览器支持与跨域策略影响）
   try {

@@ -358,9 +358,14 @@ async function doAdd() {
 async function removeSelected() {
   if (!hasSelection.value) return
   const ids = selection.value.map(r => r.id)
-  await api.customers.removeBatch(ids)
-  await reload()
-  ElMessage.success(t('customers.messages.deletedSelected'))
+  // 此前没有 try/catch：删除失败（无权限、被外键引用等）时界面毫无反馈，用户会以为没点上而反复点击
+  try {
+    await api.customers.removeBatch(ids)
+    await reload()
+    ElMessage.success(t('customers.messages.deletedSelected'))
+  } catch (e) {
+    ElMessage.error(e?.message || '删除失败')
+  }
 }
 
 // 自动检测编码并解码 CSV 文本：优先 utf-8，回退 gb18030/gbk/big5

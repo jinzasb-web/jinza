@@ -83,12 +83,14 @@ console.log('认证状态已重置，请刷新页面并重新登录');
 
 1. 推送代码变更到GitHub：
 ```bash
-git add index.html scripts/production-fix.js scripts/production-auth-reset.js
-git commit -m "修复: 添加meta标签并创建生产环境修复脚本"
-git push origin main
+git add -A
+git commit -m "修复: 说明本次改动"
+git push origin jinza-pay
 ```
 
 2. Railway平台将自动部署更新
+
+> 注：本文档早前引用的 `scripts/production-fix.js`、`scripts/production-auth-reset.js` 等一次性脚本已于代码清理中删除（它们未被任何流程引用，其中 `production-fix.js` 还会因引用未定义变量直接报错）。
 
 ## 注意
 

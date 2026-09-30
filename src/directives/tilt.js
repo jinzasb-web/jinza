@@ -27,7 +27,7 @@ export default {
     el.__tiltHandlers = {
       enter: () => el.classList.add('jelly-pop'),
       move: onMove,
-      leave: reset
+      leave: () => { el.classList.remove('jelly-pop'); reset() }
     }
     el.classList.add('will-anim')
     el.addEventListener('mouseenter', el.__tiltHandlers.enter)

@@ -7,8 +7,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // 配置数据库连接
-// 优先使用环境变量中的DATABASE_URL，如果没有则使用默认连接字符串
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:GvDViOFhACSKomPtKqKnqxqUIHiAHbnP@postgres.railway.internal:5432/railway';
+// 仅允许通过环境变量 DATABASE_URL 指定；绝不在此文件写死连接串（本文件曾泄漏过生产库口令，须轮换）
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error('ERROR: DATABASE_URL is not set. Aborting.');
+  process.exit(1);
+}
 
 const { Pool } = pg;
 const pool = new Pool({
@@ -32,6 +36,9 @@ async function applyMigration() {
     // 如果错误是表已存在，则视为成功
     if (error.message && error.message.includes('already exists')) {
       console.log('表已存在，无需创建。');
+    } else {
+      // 之前这里会吞掉所有错误并以退出码 0 结束（假成功），例如迁移文件不存在(ENOENT)
+      process.exitCode = 1;
     }
   } finally {
     await pool.end();

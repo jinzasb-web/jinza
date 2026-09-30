@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import * as auth from './auth.js'
-import { query } from './db.js'
+import { query, withTransaction, queryWithClient } from './db.js'
 
 export const fxRouter = express.Router()
 
@@ -256,10 +256,6 @@ fxRouter.post('/platforms/:id/convert', auth.authMiddleware(true), auth.requireA
   if (!okCurr.has(from) || !okCurr.has(to) || from === to) return res.status(400).json({ error: 'invalid currency' })
   if (!(amt > 0) || !(r > 0)) return res.status(400).json({ error: 'invalid amount/rate' })
 
-  // 获取平台与费率
-  const pr = await query('select id, fee_percent, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1', [id])
-  if (!pr.rowCount) return res.status(404).json({ error: 'platform not found' })
-  const p = pr.rows[0]
   // 根据最新需求：购汇不计手续费
   const feePercent = 0
   const fee = 0
@@ -269,24 +265,29 @@ fxRouter.post('/platforms/:id/convert', auth.authMiddleware(true), auth.requireA
   const srcField = from === 'USD' ? 'balance_usd' : (from === 'MYR' ? 'balance_myr' : 'balance_cny')
   const dstField = to === 'USD' ? 'balance_usd' : (to === 'MYR' ? 'balance_myr' : 'balance_cny')
 
-  // 充足性校验
-  const currentSrc = Number(p[srcField]||0)
-  if (currentSrc < debitTotal) {
-    return res.status(400).json({ error: 'insufficient balance', detail: { required: debitTotal, current: currentSrc, currency: from } })
-  }
-
   // 原子更新：事务
   try {
-    await query('begin')
+    const result = await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
+    // 余额必须在事务内加锁读取：若在事务外预读，两个并发 convert 会各自基于同一份旧余额算出绝对值再写回，
+    // 后写者覆盖先写者 → 丢失更新（凭空多出或凭空少掉一笔余额）
+    const pr = await q('select id, fee_percent, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update', [id])
+    if (!pr.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
+    const p = pr.rows[0]
+    // 充足性校验（基于已加锁的最新余额）
+    const currentSrc = Number(p[srcField]||0)
+    if (currentSrc < debitTotal) {
+      throw Object.assign(new Error('insufficient balance'), { status: 400, payload: { error: 'insufficient balance', detail: { required: debitTotal, current: currentSrc, currency: from } } })
+    }
     // 计算交易前余额
-    const srcBefore = Number(p[srcField]||0)
+    const srcBefore = currentSrc
     const dstBefore = Number(p[dstField]||0)
     const srcAfter = Math.round((srcBefore - debitTotal) * 100) / 100
     const dstAfter = Math.round((dstBefore + creditTo) * 100) / 100
     // 更新平台余额
-    await query(`update fx_platforms set ${srcField} = $1, ${dstField} = $2 where id=$3`, [srcAfter, dstAfter, id])
+    await q(`update fx_platforms set ${srcField} = $1, ${dstField} = $2 where id=$3`, [srcAfter, dstAfter, id])
     // 写记录（包含前后余额）
-    await query(
+    await q(
       `insert into fx_platform_fx_transfers(
         platform_id, from_currency, to_currency, amount_from, rate, fee_percent, fee_amount, amount_to,
         balance_src_before, balance_dst_before, balance_src_after, balance_dst_after, note, created_by)
@@ -294,12 +295,13 @@ fxRouter.post('/platforms/:id/convert', auth.authMiddleware(true), auth.requireA
       [id, from, to, debitTotal, r, feePercent, fee, creditTo,
        srcBefore, dstBefore, srcAfter, dstAfter, (note||null), req.user?.id || null]
     )
-    await query('commit')
-    res.json({ ok: true, balances: { id, balance_usd: (from==='USD'||to==='USD')? (from==='USD'?srcAfter:dstAfter) : Number(p.balance_usd||0), balance_myr: (from==='MYR'||to==='MYR')? (from==='MYR'?srcAfter:dstAfter) : Number(p.balance_myr||0), balance_cny: (from==='CNY'||to==='CNY')? (from==='CNY'?srcAfter:dstAfter) : Number(p.balance_cny||0) }, fee_amount: fee, amount_to: creditTo })
+    return { ok: true, balances: { id, balance_usd: (from==='USD'||to==='USD')? (from==='USD'?srcAfter:dstAfter) : Number(p.balance_usd||0), balance_myr: (from==='MYR'||to==='MYR')? (from==='MYR'?srcAfter:dstAfter) : Number(p.balance_myr||0), balance_cny: (from==='CNY'||to==='CNY')? (from==='CNY'?srcAfter:dstAfter) : Number(p.balance_cny||0) }, fee_amount: fee, amount_to: creditTo }
+    })
+    res.json(result)
   } catch (e) {
-    await query('rollback')
     console.error('platform convert failed', e)
-    res.status(500).json({ error: 'convert failed', detail: e.message })
+    const st = e?.status || 500
+    res.status(st).json(e?.payload || { error: 'convert failed', detail: e.message })
   }
 })
 
@@ -360,10 +362,11 @@ fxRouter.put('/transfers/:id', auth.authMiddleware(true), auth.requireAnyPerm('b
   const newDstField = to === 'USD' ? 'balance_usd' : (to === 'MYR' ? 'balance_myr' : 'balance_cny')
 
   try {
-    await query('begin')
+    const updated = await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
     // 锁住平台行，避免并发
-    const plat = await query(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [old.platform_id])
-    if (!plat.rowCount) { await query('rollback'); return res.status(404).json({ error: 'platform not found' }) }
+    const plat = await q(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [old.platform_id])
+    if (!plat.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
     let p = plat.rows[0]
 
     // 回滚旧影响：优先按快照差值
@@ -373,7 +376,7 @@ fxRouter.put('/transfers/:id', auth.authMiddleware(true), auth.requireAnyPerm('b
       const deltaDst = Number(old.balance_dst_after) - Number(old.balance_dst_before)
       const ps = Number(p[oldSrcField]||0) - deltaSrc
       const pd = Number(p[oldDstField]||0) - deltaDst
-      await query(`update fx_platforms set ${oldSrcField} = round($1,2), ${oldDstField} = round($2,2) where id=$3`, [ps, pd, old.platform_id])
+      await q(`update fx_platforms set ${oldSrcField} = round($1,2), ${oldDstField} = round($2,2) where id=$3`, [ps, pd, old.platform_id])
       p[oldSrcField] = Math.round(ps * 100) / 100
       p[oldDstField] = Math.round(pd * 100) / 100
     } else {
@@ -381,28 +384,27 @@ fxRouter.put('/transfers/:id', auth.authMiddleware(true), auth.requireAnyPerm('b
       const minusBack = Math.round(Number(old.amount_to||0) * 100) / 100
       const ps = Number(p[oldSrcField]||0) + addBack
       const pd = Number(p[oldDstField]||0) - minusBack
-      await query(`update fx_platforms set ${oldSrcField} = round($1,2), ${oldDstField} = round($2,2) where id=$3`, [ps, pd, old.platform_id])
+      await q(`update fx_platforms set ${oldSrcField} = round($1,2), ${oldDstField} = round($2,2) where id=$3`, [ps, pd, old.platform_id])
       p[oldSrcField] = Math.round(ps * 100) / 100
       p[oldDstField] = Math.round(pd * 100) / 100
     }
 
     // 读取回滚后的最新余额作为新的 before 快照
-    const lock2 = await query(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [old.platform_id])
-    if (!lock2.rowCount) { await query('rollback'); return res.status(404).json({ error: 'platform not found' }) }
+    const lock2 = await q(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [old.platform_id])
+    if (!lock2.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
     p = lock2.rows[0]
     const srcBefore = Number(p[newSrcField]||0)
     const dstBefore = Number(p[newDstField]||0)
     // 充足性校验
     if (srcBefore < debitTotal) {
-      await query('rollback')
-      return res.status(400).json({ error: 'insufficient balance', detail: { required: debitTotal, current: srcBefore, currency: from } })
+      throw Object.assign(new Error('insufficient balance'), { status: 400, payload: { error: 'insufficient balance', detail: { required: debitTotal, current: srcBefore, currency: from } } })
     }
     const srcAfter = Math.round((srcBefore - debitTotal) * 100) / 100
     const dstAfter = Math.round((dstBefore + creditTo) * 100) / 100
     // 应用新影响
-    await query(`update fx_platforms set ${newSrcField} = $1, ${newDstField} = $2 where id=$3`, [srcAfter, dstAfter, old.platform_id])
+    await q(`update fx_platforms set ${newSrcField} = $1, ${newDstField} = $2 where id=$3`, [srcAfter, dstAfter, old.platform_id])
     // 更新记录
-    const upd = await query(`
+    const upd = await q(`
       update fx_platform_fx_transfers
          set from_currency=$1, to_currency=$2, amount_from=$3, rate=$4, amount_to=$5,
              balance_src_before=$6, balance_dst_before=$7, balance_src_after=$8, balance_dst_after=$9,
@@ -410,12 +412,13 @@ fxRouter.put('/transfers/:id', auth.authMiddleware(true), auth.requireAnyPerm('b
        where id=$11
        returning *
     `, [from, to, amt, r, creditTo, srcBefore, dstBefore, srcAfter, dstAfter, (note||null), id])
-    await query('commit')
-    return res.json(upd.rows[0])
+    return upd.rows[0]
+    })
+    return res.json(updated)
   } catch (e) {
-    await query('rollback')
     console.error('update transfer failed', e)
-    return res.status(500).json({ error: 'update failed', detail: e.message })
+    const st = e?.status || 500
+    return res.status(st).json(e?.payload || { error: 'update failed', detail: e.message })
   }
 })
 
@@ -430,30 +433,31 @@ fxRouter.delete('/transfers/:id', auth.authMiddleware(true), auth.requireAnyPerm
   const srcField = row.from_currency === 'USD' ? 'balance_usd' : (row.from_currency === 'MYR' ? 'balance_myr' : 'balance_cny')
   const dstField = row.to_currency === 'USD' ? 'balance_usd' : (row.to_currency === 'MYR' ? 'balance_myr' : 'balance_cny')
   try {
-    await query('begin')
+    await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
     const hasSnap = row.balance_src_before != null && row.balance_dst_before != null && row.balance_src_after != null && row.balance_dst_after != null
     if (hasSnap) {
       const deltaSrc = Number(row.balance_src_after) - Number(row.balance_src_before) // 负数
       const deltaDst = Number(row.balance_dst_after) - Number(row.balance_dst_before) // 正数
-      await query(
+      await q(
         `update fx_platforms set ${srcField} = round(coalesce(${srcField},0) - $1, 2), ${dstField} = round(coalesce(${dstField},0) - $2, 2) where id=$3`,
         [deltaSrc, deltaDst, Number(row.platform_id)]
       )
     } else {
       const addBack = Math.round(Number(row.amount_from||0) * 100) / 100
       const minusBack = Math.round(Number(row.amount_to||0) * 100) / 100
-      await query(
+      await q(
         `update fx_platforms set ${srcField} = round(coalesce(${srcField},0) + $1, 2), ${dstField} = round(coalesce(${dstField},0) - $2, 2) where id=$3`,
         [addBack, minusBack, Number(row.platform_id)]
       )
     }
-    await query(`delete from fx_platform_fx_transfers where id=$1`, [id])
-    await query('commit')
+    await q(`delete from fx_platform_fx_transfers where id=$1`, [id])
+    })
     res.json({ ok: true })
   } catch (e) {
-    await query('rollback')
     console.error('delete transfer failed', e)
-    res.status(500).json({ error: 'delete failed', detail: e.message })
+    const st = e?.status || 500
+    res.status(st).json(e?.payload || { error: 'delete failed', detail: e.message })
   }
 })
 
@@ -644,7 +648,8 @@ fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx
   const bill_no = createdAtIso.replaceAll('-', '').replaceAll(':', '').replace('.', '')
   // 查询客户最新税率（百分比p，0-100），计算实际系数 factor = 1 - p/100；
   // 兼容历史：仅当 0<raw<1 时将其视为系数 f，换算 p=(1-f)*100；raw=0 或 raw=1 视为 0%/1% 的百分比。
-  let taxFactor = 0
+  // 默认系数必须是 1（不打折）。若默认 0，则在客户查询失败时会静默把结汇金额算成 0
+  let taxFactor = 1
   let taxPercent = 0
   try {
     const crs = await query('select tax_rate from customers where id=$1', [Number(customer_id)])
@@ -665,8 +670,13 @@ fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx
       p = Math.round(p * 1000) / 1000
       taxFactor = f
       taxPercent = p
+    } else {
+      // 客户不存在：明确报错，避免按默认税率静默算出错误金额
+      return res.status(400).json({ error: 'customer not found' })
     }
-  } catch {}
+  } catch (e) {
+    console.error('settlement tax rate lookup failed:', e?.message || e)
+  }
 
   // 计算合计：马币金额（按 credit-debit）与结汇金额（基数×税率×汇率）
   const total_base = items.reduce((s, it) => s + Number(it.amount_base||0), 0)
@@ -1657,13 +1667,14 @@ fxRouter.get('/payments', auth.authMiddleware(true), auth.readOpenOr('fx:payment
 // 付款单：列表导出（按筛选），scope=all|page（默认 all）
 fxRouter.get('/payments/export', auth.authMiddleware(true), auth.readOpenOr('fx:export'), async (req, res) => {
   await ensureDDL()
-  const { customerId, startDate, endDate, page = 1, pageSize = 20, scope = 'all' } = req.query
+  const { customerId, startDate, endDate, page = 1, pageSize = 20, scope = 'all', status } = req.query
   const where = []
   const params = []
   let idx = 1
   if (customerId) { where.push(`p.customer_id = $${idx++}`); params.push(Number(customerId)) }
   if (startDate) { where.push(`p.pay_date >= $${idx++}`); params.push(startDate) }
   if (endDate)   { where.push(`p.pay_date <= $${idx++}`); params.push(endDate) }
+  if (status)    { where.push(`p.status = $${idx++}`); params.push(String(status)) }
   const whereSql = where.length ? `where ${where.join(' and ')}` : ''
   let limitSql = ''
   if (String(scope) === 'page') {
@@ -1773,25 +1784,26 @@ fxRouter.post('/payments/:id/approve', auth.authMiddleware(true), auth.requirePe
   const uid = req.user?.id || null
 
   try {
-    await query('begin')
+    await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
     // 锁定单据头，校验状态
-    const h = await query(`select * from fx_payments where id=$1 for update`, [id])
-    if (!h.rowCount) { await query('rollback'); return res.status(404).json({ error: 'not found' }) }
+    const h = await q(`select * from fx_payments where id=$1 for update`, [id])
+    if (!h.rowCount) throw Object.assign(new Error('not found'), { status: 404, payload: { error: 'not found' } })
     const head = h.rows[0]
-    if (String(head.status) !== 'pending') { await query('rollback'); return res.status(400).json({ error: 'only pending can be approved' }) }
+    if (String(head.status) !== 'pending') throw Object.assign(new Error('only pending can be approved'), { status: 400, payload: { error: 'only pending can be approved' } })
 
     // 汇总明细：按币种统计金额
-    const items = await query(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
+    const items = await q(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
     // 没有明细视为错误
-    if (!items.rowCount) { await query('rollback'); return res.status(400).json({ error: 'empty items' }) }
+    if (!items.rowCount) throw Object.assign(new Error('empty items'), { status: 400, payload: { error: 'empty items' } })
 
     // 如指定平台，则按平台设置的手续费校验并扣减余额
     let feeTotal = 0
     const deltas = {}
     if (pid) {
       // 锁平台行并获取手续费配置
-      const pr = await query(`select id, balance_usd, balance_myr, balance_cny, fee_percent from fx_platforms where id=$1 for update`, [pid])
-      if (!pr.rowCount) { await query('rollback'); return res.status(404).json({ error: 'platform not found' }) }
+      const pr = await q(`select id, balance_usd, balance_myr, balance_cny, fee_percent from fx_platforms where id=$1 for update`, [pid])
+      if (!pr.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
       const p = pr.rows[0]
       feePct = Math.max(0, Number(p.fee_percent||0))
 
@@ -1801,39 +1813,38 @@ fxRouter.post('/payments/:id/approve', auth.authMiddleware(true), auth.requirePe
         const amt = Math.round(Number(r.total||0) * 100) / 100
         if (!(amt > 0)) continue
         const field = cur === 'USD' ? 'balance_usd' : (cur === 'MYR' ? 'balance_myr' : (cur === 'CNY' ? 'balance_cny' : null))
-        if (!field) { await query('rollback'); return res.status(400).json({ error: `unsupported currency ${cur}` }) }
+        if (!field) throw Object.assign(new Error(`unsupported currency ${cur}`), { status: 400, payload: { error: `unsupported currency ${cur}` } })
         const fee = Math.round((amt * feePct / 100) * 100) / 100
         feeTotal += fee
         const before = Number(p[field]||0)
         const need = Math.round((amt + fee) * 100) / 100
-        if (before < need) { await query('rollback'); return res.status(400).json({ error: 'insufficient platform balance', detail: { currency: cur, required: need, current: before } }) }
+        if (before < need) throw Object.assign(new Error('insufficient platform balance'), { status: 400, payload: { error: 'insufficient platform balance', detail: { currency: cur, required: need, current: before } } })
         const after = Math.round((before - need) * 100) / 100
-        await query(`update fx_platforms set ${field}=$1 where id=$2`, [after, pid])
+        await q(`update fx_platforms set ${field}=$1 where id=$2`, [after, pid])
         p[field] = after
         deltas[cur] = { amount: amt, fee, total: need }
       }
     }
 
     // 更新单据头：状态、平台与手续费
-    const up = await query(`
+    const up = await q(`
       update fx_payments
          set status='completed', approved_by=$1, approved_at=now(),
              platform_id=$2, platform_fee_percent=$3, platform_fee_amount=$4
        where id=$5
        returning *
     `, [uid, (pid||null), feePct, Math.round(feeTotal*100)/100, id])
-    if (!up.rowCount) { await query('rollback'); return res.status(404).json({ error: 'not found' }) }
+    if (!up.rowCount) throw Object.assign(new Error('not found'), { status: 404, payload: { error: 'not found' } })
 
     // 写审核日志
-    await query(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
+    await q(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
       [id, 'approve', (pid||null), feePct, Math.round(feeTotal*100)/100, JSON.stringify(deltas), uid])
-
-    await query('commit')
+    })
     return res.json({ ok: true })
   } catch (e) {
-    await query('rollback')
     console.error('approve payment failed', e)
-    return res.status(500).json({ error: 'approve failed', detail: e.message })
+    const st = e?.status || 500
+    return res.status(st).json(e?.payload || { error: 'approve failed', detail: e.message })
   }
 })
 
@@ -1848,10 +1859,11 @@ fxRouter.post('/payments/batch-approve', auth.authMiddleware(true), auth.require
   const uid = req.user?.id || null
 
   try {
-    await query('begin')
+    await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
     // 锁平台，获取余额与手续费
-    const pr = await query(`select id, balance_usd, balance_myr, balance_cny, fee_percent from fx_platforms where id=$1 for update`, [pid])
-    if (!pr.rowCount) { await query('rollback'); return res.status(404).json({ error: 'platform not found' }) }
+    const pr = await q(`select id, balance_usd, balance_myr, balance_cny, fee_percent from fx_platforms where id=$1 for update`, [pid])
+    if (!pr.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
     const p = pr.rows[0]
     const feePct = Math.max(0, Number(p.fee_percent||0))
 
@@ -1861,13 +1873,13 @@ fxRouter.post('/payments/batch-approve', auth.authMiddleware(true), auth.require
 
     // 锁并校验每张单据，汇总数据
     for (const id of list) {
-      const h = await query(`select * from fx_payments where id=$1 for update`, [id])
-      if (!h.rowCount) { await query('rollback'); return res.status(404).json({ error: `payment ${id} not found` }) }
+      const h = await q(`select * from fx_payments where id=$1 for update`, [id])
+      if (!h.rowCount) throw Object.assign(new Error(`payment ${id} not found`), { status: 404, payload: { error: `payment ${id} not found` } })
       const head = h.rows[0]
-      if (String(head.status) !== 'pending') { await query('rollback'); return res.status(400).json({ error: `payment ${id} not pending` }) }
+      if (String(head.status) !== 'pending') throw Object.assign(new Error(`payment ${id} not pending`), { status: 400, payload: { error: `payment ${id} not pending` } })
 
-      const items = await query(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
-      if (!items.rowCount) { await query('rollback'); return res.status(400).json({ error: `payment ${id} has no items` }) }
+      const items = await q(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
+      if (!items.rowCount) throw Object.assign(new Error(`payment ${id} has no items`), { status: 400, payload: { error: `payment ${id} has no items` } })
 
       const deltas = {}
       let feeTotal = 0
@@ -1880,7 +1892,7 @@ fxRouter.post('/payments/batch-approve', auth.authMiddleware(true), auth.require
         deltas[cur] = { amount: amt, fee, total: need }
         feeTotal += fee
         if (cur === 'USD' || cur === 'MYR' || cur === 'CNY') grandTotals[cur] = Math.round((grandTotals[cur] + need) * 100) / 100
-        else { await query('rollback'); return res.status(400).json({ error: `unsupported currency ${cur}` }) }
+        else throw Object.assign(new Error(`unsupported currency ${cur}`), { status: 400, payload: { error: `unsupported currency ${cur}` } })
       }
       perPayment.set(id, { deltas, feeTotal })
     }
@@ -1890,8 +1902,7 @@ fxRouter.post('/payments/batch-approve', auth.authMiddleware(true), auth.require
     for (const cur of ['USD','MYR','CNY']) {
       const need = Number(grandTotals[cur]||0)
       if (need > 0 && before[cur] < need) {
-        await query('rollback')
-        return res.status(400).json({ error: 'insufficient platform balance', detail: { currency: cur, required: need, current: before[cur] } })
+        throw Object.assign(new Error('insufficient platform balance'), { status: 400, payload: { error: 'insufficient platform balance', detail: { currency: cur, required: need, current: before[cur] } } })
       }
     }
 
@@ -1901,28 +1912,28 @@ fxRouter.post('/payments/batch-approve', auth.authMiddleware(true), auth.require
       MYR: Math.round((before.MYR - grandTotals.MYR) * 100) / 100,
       CNY: Math.round((before.CNY - grandTotals.CNY) * 100) / 100
     }
-    await query(`update fx_platforms set balance_usd=$1, balance_myr=$2, balance_cny=$3 where id=$4`, [after.USD, after.MYR, after.CNY, pid])
+    await q(`update fx_platforms set balance_usd=$1, balance_myr=$2, balance_cny=$3 where id=$4`, [after.USD, after.MYR, after.CNY, pid])
 
     // 更新每张单据状态并写审计
     for (const id of list) {
       const { deltas, feeTotal } = perPayment.get(id)
-      await query(`
+      await q(`
         update fx_payments
            set status='completed', approved_by=$1, approved_at=now(),
                platform_id=$2, platform_fee_percent=$3, platform_fee_amount=$4
          where id=$5
       `, [uid, pid, feePct, Math.round(feeTotal*100)/100, id])
 
-      await query(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
+      await q(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
         [id, 'approve', pid, feePct, Math.round(feeTotal*100)/100, JSON.stringify(deltas), uid])
     }
 
-    await query('commit')
+    })
     return res.json({ ok: true, count: list.length })
   } catch (e) {
-    await query('rollback')
     console.error('batch approve failed', e)
-    return res.status(500).json({ error: 'batch approve failed', detail: e.message })
+    const st = e?.status || 500
+    return res.status(st).json(e?.payload || { error: 'batch approve failed', detail: e.message })
   }
 })
 
@@ -1933,47 +1944,47 @@ fxRouter.post('/payments/:id/unapprove', auth.authMiddleware(true), auth.require
   if (!id) return res.status(400).json({ error: 'invalid id' })
   const uid = req.user?.id || null
   try {
-    await query('begin')
-    const h = await query(`select * from fx_payments where id=$1 for update`, [id])
-    if (!h.rowCount) { await query('rollback'); return res.status(404).json({ error: 'not found' }) }
+    await withTransaction(async (client) => {
+    const q = (t, p) => queryWithClient(client, t, p)
+    const h = await q(`select * from fx_payments where id=$1 for update`, [id])
+    if (!h.rowCount) throw Object.assign(new Error('not found'), { status: 404, payload: { error: 'not found' } })
     const head = h.rows[0]
-    if (String(head.status) !== 'completed') { await query('rollback'); return res.status(400).json({ error: 'only completed can be unapproved' }) }
+    if (String(head.status) !== 'completed') throw Object.assign(new Error('only completed can be unapproved'), { status: 400, payload: { error: 'only completed can be unapproved' } })
 
     const pid = Number(head.platform_id||0)
     const feePct = Number(head.platform_fee_percent||0)
-    const items = await query(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
+    const items = await q(`select upper(currency_code) as currency, sum(amount) as total from fx_payment_items where payment_id=$1 group by upper(currency_code)`, [id])
     const deltas = {}
     if (pid) {
-      const pr = await query(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [pid])
-      if (!pr.rowCount) { await query('rollback'); return res.status(404).json({ error: 'platform not found' }) }
+      const pr = await q(`select id, balance_usd, balance_myr, balance_cny from fx_platforms where id=$1 for update`, [pid])
+      if (!pr.rowCount) throw Object.assign(new Error('platform not found'), { status: 404, payload: { error: 'platform not found' } })
       const p = pr.rows[0]
       for (const r of items.rows) {
         const cur = String(r.currency||'').toUpperCase()
         const amt = Math.round(Number(r.total||0) * 100) / 100
         if (!(amt > 0)) continue
         const field = cur === 'USD' ? 'balance_usd' : (cur === 'MYR' ? 'balance_myr' : (cur === 'CNY' ? 'balance_cny' : null))
-        if (!field) { await query('rollback'); return res.status(400).json({ error: `unsupported currency ${cur}` }) }
+        if (!field) throw Object.assign(new Error(`unsupported currency ${cur}`), { status: 400, payload: { error: `unsupported currency ${cur}` } })
         const fee = Math.round((amt * feePct / 100) * 100) / 100
         const back = Math.round((amt + fee) * 100) / 100
         const before = Number(p[field]||0)
         const after = Math.round((before + back) * 100) / 100
-        await query(`update fx_platforms set ${field}=$1 where id=$2`, [after, pid])
+        await q(`update fx_platforms set ${field}=$1 where id=$2`, [after, pid])
         p[field] = after
         deltas[cur] = { amount: amt, fee, total: back }
       }
     }
 
     // 回到 pending（保留 platform_id/fee% 以便再次审批）
-    await query(`update fx_payments set status='pending', approved_by=null, approved_at=null where id=$1`, [id])
-    await query(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
+    await q(`update fx_payments set status='pending', approved_by=null, approved_at=null where id=$1`, [id])
+    await q(`insert into fx_payment_audits(payment_id, action, platform_id, fee_percent, fee_amount, deltas, acted_by) values($1,$2,$3,$4,$5,$6,$7)`,
       [id, 'unapprove', (pid||null), feePct, Number(head.platform_fee_amount||0), JSON.stringify(deltas), uid])
-
-    await query('commit')
+    })
     return res.json({ ok: true })
   } catch (e) {
-    await query('rollback')
     console.error('unapprove payment failed', e)
-    return res.status(500).json({ error: 'unapprove failed', detail: e.message })
+    const st = e?.status || 500
+    return res.status(st).json(e?.payload || { error: 'unapprove failed', detail: e.message })
   }
 })
 

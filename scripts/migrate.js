@@ -59,10 +59,18 @@ async function main() {
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.sql')).sort()
   const applied = await getApplied()
   let appliedCount = 0
+  let failedFile = null // 中止时失败的文件名，用于避免误报“全部完成”
   for (const f of files) {
     if (applied.has(f)) { continue }
     const fp = path.join(dir, f)
     const sql = fs.readFileSync(fp, 'utf8')
+    // 编码防御：非 UTF-8（如 UTF-16）文件按 utf8 解码会产生 NUL / 替换字符，不能直接交给 PostgreSQL
+    if (sql.includes('\u0000') || sql.includes('\uFFFD')) {
+      console.error(`ERROR: 迁移文件编码异常：${f} 含有 NUL 或替换字符，疑似不是 UTF-8（例如 UTF-16），请先转换为 UTF-8 无 BOM 后重试。`)
+      process.exitCode = 2
+      failedFile = f
+      break
+    }
     process.stdout.write(`Applying ${f}... `)
     try {
       await applySql(f, sql)
@@ -71,10 +79,15 @@ async function main() {
     } catch (e) {
       console.error(`FAILED: ${e.message}`)
       process.exitCode = 2
+      failedFile = f
       break
     }
   }
-  console.log(`Migrations complete. Applied ${appliedCount} new migration(s).`)
+  if (failedFile) {
+    console.error(`迁移已中止：${failedFile} 失败，该文件之后的迁移未执行（本次成功应用 ${appliedCount} 个）。请修复后重新运行。`)
+  } else {
+    console.log(`Migrations complete. Applied ${appliedCount} new migration(s).`)
+  }
   await closePool()
 }
 

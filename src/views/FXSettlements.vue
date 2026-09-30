@@ -129,7 +129,9 @@ import { useI18n } from 'vue-i18n'
 import { api, request as httpRequest } from '@/api'
 import { useTableMemory } from '@/composables/useTableMemory'
 import { useAuth } from '@/composables/useAuth'
-  import { useBankLogo } from '@/composables/useBankLogo'
+import { useBankLogo } from '@/composables/useBankLogo'
+// 模板 105-106 行用到 logoFail/logoKey/resolveLogo/onLogoError，此前只 import 未调用，导致明细抽屉渲染报错
+const { logoFail, logoKey, resolveLogo, onLogoError } = useBankLogo()
 const { t, locale } = useI18n()
 const { has } = useAuth()
 const rows = ref([])

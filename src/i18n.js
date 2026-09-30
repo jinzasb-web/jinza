@@ -242,6 +242,7 @@ const messages = {
   replaceTitle: '替换 Logo',
   labels: { code: '代码', zh: '中文名', en: '英文名', uploadFile: '上传文件（自动以代码命名）' },
   hintFile: '文件上传后将以银行代码命名保存到 /banks 目录（优先 SVG，失败回退 PNG/JPG）',
+  hintFileTooLarge: '文件过大，请选择小于 4MB 的图片（推荐 SVG）',
   placeholders: {
     codeExample: '例如：ICBC',
     zhNameExample: '中国工商银行',
@@ -330,7 +331,8 @@ const messages = {
         expenses: '费用合计',
         month: '月份',
         baseAmount: '基金额',
-        settledAmount: '结汇额'
+        settledAmount: '结汇额',
+        selectedTotalMYR: '选中合计(MYR)'
       },
       cards: {
         tx: '导入/管理交易，匹配对象与统计',
@@ -739,7 +741,6 @@ const messages = {
   sortBy: '排序列',
   asc: '升序',
   desc: '降序',
-  apply: '应用',
   previewFirstN: '预览（前 {n} 条）',
   totalRecords: '共 {n} 条记录',
   importCount: '导入 ({n} 条)',
@@ -807,7 +808,30 @@ const messages = {
         description: '描述',
         debitAmount: '借方金额',
         creditAmount: '贷方金额'
-      }
+      },
+      billNo: '单据编号',
+      category: '分类',
+      categoryOptions: {
+        income: '收入',
+        expense: '支出'
+      },
+      createdAt: '创建时间',
+      createdBy: '创建人',
+      createSuccess: '新增成功',
+      createFailed: '新增失败',
+      updateSuccess: '更新成功',
+      updateFailed: '更新失败',
+      deleteConfirmTitle: '确认删除',
+      deleteConfirmMessage: '确定要删除选中的交易吗？此操作不可恢复。',
+      deleteSuccess: '删除成功',
+      deleteFailed: '删除失败',
+      exportSuccess: '导出成功',
+      exportFailed: '导出失败',
+      noDataToExport: '没有可导出的数据',
+      matchSuccess: '匹配成功',
+      matchFailed: '匹配失败',
+      statsFetchFailed: '获取统计数据失败',
+      todoPlaceholder: '该匹配类型暂未实现'
   },
   fx: {
       title: '结汇管理',

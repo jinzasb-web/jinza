@@ -46,7 +46,7 @@ export async function request(path, opts = {}) {
   
   // 统一读取响应体文本
   const responseText = await res.text()
-  console.log(`API ${path} status:${res.status} response:`, responseText) // 调试日志
+  if (import.meta.env.DEV) console.log(`API ${path} status:${res.status} response:`, responseText) // 仅开发环境调试日志（避免生产环境泄露响应体/Token）
   
   if (!res.ok) {
     if (res.status === 401) {
@@ -393,7 +393,8 @@ export const api = {
   unapprove: (id) => request(`/fx/payments/${id}/unapprove`, { method: 'POST' }),
   audits: (id) => request(`/fx/payments/${id}/audits`),
   batchApprove: (ids, platform_id) => request(`/fx/payments/batch-approve`, { method: 'POST', body: JSON.stringify({ ids, platform_id }) }),
-      exportPdf: async (id) => {
+      // lang 可选：仅当显式传入时才拼 ?lang=，避免影响其他调用方
+      exportPdf: async (id, lang) => {
         const token = (function(){
           try { const s = sessionStorage.getItem('auth_user'); if (s) { const d = JSON.parse(s); if (d?.token) return d.token } } catch{}
           try { const s = localStorage.getItem('auth_user'); if (s) { const d = JSON.parse(s); if (d?.token) return d.token } } catch{}
@@ -401,7 +402,8 @@ export const api = {
         })()
         const headers = { }
         if (token) headers['Authorization'] = `Bearer ${token}`
-        const res = await fetch(`${API_BASE}/fx/payments/${id}/pdf`, { headers })
+        const url = `${API_BASE}/fx/payments/${id}/pdf` + (lang ? `?lang=${encodeURIComponent(lang)}` : '')
+        const res = await fetch(url, { headers })
         if (!res.ok) throw new Error(await res.text())
         const blob = await res.blob()
         // 从 Content-Disposition 获取服务端文件名（UTF-8）

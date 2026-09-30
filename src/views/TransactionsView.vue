@@ -1422,8 +1422,16 @@ const exportTransactions = async () => {
       params.category = filters.category
     }
     
+    // 与列表口径保持一致：列表只显示未匹配交易（见 fetchTransactions 的 params.status='pending'），
+    // 导出此前漏了 status 与 searchTerm，导致导出的行数与界面不符、且搜了关键词导出却是全量
+    params.status = 'pending'
+    if (searchQuery.value) {
+      params.searchTerm = searchQuery.value
+      params.searchAmountOnly = searchAmountOnly.value ? '1' : '0'
+    }
+    
     // 使用API获取导出数据
-    const data = await api.transactions.export({ ...params, searchAmountOnly: searchAmountOnly.value ? '1' : '0' })
+    const data = await api.transactions.export(params)
     
     if (!data || data.length === 0) {
       ElMessage.warning(t('transactions.noDataToExport'))
@@ -1439,15 +1447,20 @@ const exportTransactions = async () => {
       t('transactions.csvHeaders.debitAmount'),
       t('transactions.csvHeaders.creditAmount')
     ]
+    // 所有字段统一做 CSV 转义：此前只对 description 转义，帐号/支票号/摘要里含逗号或引号时 Excel 会列错位
+    const esc = (v) => {
+      const s = v == null ? '' : String(v)
+      return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+    }
     const csvContent = [
-      headers.join(','),
+      headers.map(esc).join(','),
       ...data.map(row => [
-        row.account_number || '',
-        row.transaction_date || '',
-        row.cheque_ref_no || '',
-        `"${(row.transaction_description || '').replace(/"/g, '""')}"`,
-        row.debit_amount || 0,
-        row.credit_amount || 0
+        esc(row.account_number),
+        esc(row.transaction_date),
+        esc(row.cheque_ref_no),
+        esc(row.transaction_description),
+        esc(row.debit_amount || 0),
+        esc(row.credit_amount || 0)
       ].join(','))
     ].join('\n')
     

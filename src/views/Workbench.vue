@@ -438,7 +438,13 @@
           <el-table-column :label="t('transactions.bankName')" column-key="bank" :width="colWTodo('bank', 180)">
             <template #default="{ row }">
               <div style="display:flex; align-items:center; gap:8px;">
-                <img v-if="row.bank_code" :src="bankImg(row.bank_code)" :alt="row.bank_code" style="height:16px; width:auto; object-fit:contain;" @error="onBankImgErr($event)" />
+                <img
+                  v-if="logoKey(row) && resolveLogo(row) && !logoFail[logoKey(row)]"
+                  :src="resolveLogo(row)"
+                  :alt="row.bank_code"
+                  style="height:16px; width:auto; object-fit:contain;"
+                  @error="onLogoError($event, row)"
+                />
                 <span>{{ row.bank_name || row.bank_code || '-' }}</span>
               </div>
             </template>
@@ -640,7 +646,7 @@
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useI18n } from 'vue-i18n'
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { api, request as httpRequest } from '@/api'
 import { ElMessage } from 'element-plus'
 // 指标图无需 echarts
@@ -890,7 +896,7 @@ async function loadMonitor(){
       monitorSnapshot.value = { cpuPct, memPct, dbPct }
     } catch {}
   } catch (e) {
-    ElMessage.error(e?.message || 'Failed')
+    console.error('监控数据加载失败:', e?.message || e)
   } finally {
     monitor.value.loading = false
   }
@@ -907,15 +913,25 @@ watch(() => monitor.value.auto, (on) => {
     if (monitor.value.timer) { clearInterval(monitor.value.timer); monitor.value.timer = null }
   }
 })
+let snapshotTimer = null
 onMounted(() => {
   // 清理定时器（页面关闭或刷新）
-  window.addEventListener('beforeunload', () => { if (monitor.value.timer) clearInterval(monitor.value.timer) })
+  window.addEventListener('beforeunload', () => {
+    if (monitor.value.timer) clearInterval(monitor.value.timer)
+    if (snapshotTimer) clearInterval(snapshotTimer)
+  })
   // 轻量自动刷新顶部监控条（不打开抽屉也更新），每 15 秒拉一次
   try {
-    setInterval(() => { loadMonitor() }, 15000)
+    if (snapshotTimer) clearInterval(snapshotTimer)
+    snapshotTimer = setInterval(() => { loadMonitor() }, 15000)
     // 首次取一遍
     loadMonitor()
   } catch {}
+})
+// 组件卸载时清理定时器，避免切换页面后持续叠加轮询
+onBeforeUnmount(() => {
+  if (snapshotTimer) { clearInterval(snapshotTimer); snapshotTimer = null }
+  if (monitor.value.timer) { clearInterval(monitor.value.timer); monitor.value.timer = null }
 })
 
 // 顶部监控条显示（百分比与配色）

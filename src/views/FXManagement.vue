@@ -63,7 +63,7 @@
             <el-option v-for="c in payCustomers" :key="c.id" :value="c.id" :label="(c.abbr ? (c.abbr + ' · ') : '') + c.name" />
           </el-select>
           <span class="balance">CNY {{ money(cnyBalance) }}</span>
-          <el-button type="primary" :disabled="!canCreatePayment" @click="createPayment">{{ t('fx.createPayment') }}</el-button>
+          <el-button type="primary" :disabled="!canCreatePayment || creatingPayment" :loading="creatingPayment" @click="createPayment">{{ t('fx.createPayment') }}</el-button>
         </div>
         <div class="totals">
           <span>{{ t('fx.paymentTotal') }}: {{ money(paymentTotal) }}</span>
@@ -177,6 +177,8 @@ const payTableRef = ref(null)
 
 const canCreateSettlement = computed(() => !!(settleDate.value && customerId.value && rate.value && selMatched.value.length))
 const creatingSettlement = ref(false)
+// 防重复提交：付款单没有 loading 保护时，双击会发出两次 POST，后端各生成一张单据
+const creatingPayment = ref(false)
 const overBudget = computed(() => paymentTotal.value > Number(cnyBalance.value || 0))
 const canCreatePayment = computed(() => !!(payDate.value && payCustomerId.value && accounts.value.some(a => Number(a._amount) > 0) && !overBudget.value))
 
@@ -235,16 +237,22 @@ function normalizePercent(v){
   return Math.round(n * 1000) / 1000
 }
 
+// 请求序号：防止快速切换客户时旧请求的响应后到，把上一个客户的交易覆盖成当前客户的
+// —— 否则会出现「勾选的是 A 客户的流水，提交时 customerId 已是 B」，把 A 的流水结汇给 B
+let loadMatchedSeq = 0
 async function loadMatched(){
+  const mySeq = ++loadMatchedSeq
+  const myCustomerId = customerId.value
   matchedRows.value = []
   customerTaxRate.value = 0
-  if (!customerId.value) return
+  if (!myCustomerId) return
   // 获取该客户已匹配交易（表2）
-  const data = await api.transactionsByCustomer(customerId.value, { pageSize: 1000, excludeSettled: 1 })
+  const data = await api.transactionsByCustomer(myCustomerId, { pageSize: 1000, excludeSettled: 1 })
+  if (mySeq !== loadMatchedSeq) return // 已有更新的请求发出，丢弃这次过期结果
   matchedRows.value = Array.isArray(data?.data) ? data.data : []
   selMatched.value = []
   // 读取客户税率
-  const found = allCustomers.value.find(c => c.id === customerId.value)
+  const found = allCustomers.value.find(c => c.id === myCustomerId)
   customerTaxRate.value = normalizePercent(found?.tax_rate)
 }
 
@@ -329,33 +337,42 @@ async function loadAccounts(){
 }
 
 async function createPayment(){
+  if (creatingPayment.value) return
   const found = allCustomers.value.find(c => c.id === payCustomerId.value)
   if (paymentTotal.value > Number(cnyBalance.value || 0)) {
     ElMessage.error(t('fx.errExceedBalance'))
     return
   }
-  const resp = await api.fx.payments.create({
-    customer_id: payCustomerId.value,
-    customer_name: found?.name || null,
-    pay_date: payDate.value,
-    split: true,
-    items: accounts.value.filter(a => Number(a._amount) > 0).map(a => ({
-      account_id: a.id,
-      account_name: a.account_name,
-      bank_account: a.bank_account,
-      currency_code: a.currency_code,
-      amount: a._amount
-    }))
-  })
-  const n = Array.isArray(resp?.ids) ? resp.ids.length : accounts.value.filter(a => Number(a._amount) > 0).length
-  ElMessage.success(t('fx.paymentCreated', { n, total: money(paymentTotal.value) }))
-  try { emit('paymentCreated', { n, total: paymentTotal.value, customerId: payCustomerId.value }) } catch {}
-  // 清空并刷新
-  payDate.value = formatToday()
-  accounts.value = accounts.value.map(a => ({ ...a, _amount: null }))
-  selAccounts.value = []
-  await loadCustomers()
-  if (payCustomerId.value) await loadAccounts()
+  creatingPayment.value = true
+  try {
+    const resp = await api.fx.payments.create({
+      customer_id: payCustomerId.value,
+      customer_name: found?.name || null,
+      pay_date: payDate.value,
+      split: true,
+      items: accounts.value.filter(a => Number(a._amount) > 0).map(a => ({
+        account_id: a.id,
+        account_name: a.account_name,
+        bank_account: a.bank_account,
+        currency_code: a.currency_code,
+        amount: a._amount
+      }))
+    })
+    const n = Array.isArray(resp?.ids) ? resp.ids.length : accounts.value.filter(a => Number(a._amount) > 0).length
+    ElMessage.success(t('fx.paymentCreated', { n, total: money(paymentTotal.value) }))
+    try { emit('paymentCreated', { n, total: paymentTotal.value, customerId: payCustomerId.value }) } catch {}
+    // 清空并刷新
+    payDate.value = formatToday()
+    accounts.value = accounts.value.map(a => ({ ...a, _amount: null }))
+    selAccounts.value = []
+    await loadCustomers()
+    if (payCustomerId.value) await loadAccounts()
+  } catch (e) {
+    const msg = (e && e.message) ? e.message : 'Create payment failed'
+    ElMessage.error(msg)
+  } finally {
+    creatingPayment.value = false
+  }
 }
 
 onMounted(() => {

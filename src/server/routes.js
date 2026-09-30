@@ -402,7 +402,7 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
 
     // 强制 truncate with cascade
     {
-      const safeTruncate = order.filter(n => allowedTables.has(n)).map(n => quoteIdent(n, allowedTables)).filter(Boolean).join(',')
+      const safeTruncate = order.filter(n => allowed.has(n)).map(n => quoteIdent(n, allowed)).filter(Boolean).join(',')
       if (safeTruncate) {
         await query(`truncate table ${safeTruncate} restart identity cascade`)
       }
@@ -422,7 +422,7 @@ router.post('/system/restore', auth.authMiddleware(true), upload.single('file'),
       const colsSet = new Set(colsRs.rows.map(r=>r.column_name))
       const keys = Array.from(new Set(rows.flatMap(r=>Object.keys(r)))).filter(k=>colsSet.has(k))
       if (!keys.length) continue
-      const safeTbl = quoteIdent(tbl, allowedTables)
+      const safeTbl = quoteIdent(tbl, allowed)
       if (!safeTbl) continue
       for (const r of rows) {
         const vals = keys.map(k => r[k] === undefined ? null : r[k])
@@ -1017,6 +1017,13 @@ router.get('/customers', auth.authMiddleware(true), auth.readOpenOr('view_custom
   const { q = '', page = 1, pageSize = 20, sort = 'id', order = 'desc' } = req.query
   const offset = (Number(page) - 1) * Number(pageSize)
   const term = `%${q}%`
+  // 排序列白名单：sort 来自 query，禁止直接拼接进 SQL（防注入）
+  const sortMap = {
+    id: 'c.id', abbr: 'c.abbr', name: 'c.name', tax_rate: 'c.tax_rate',
+    opening_myr: 'c.opening_myr', opening_cny: 'c.opening_cny',
+    balance_myr: 'balance_myr', balance_cny: 'balance_cny'
+  }
+  const sortCol = sortMap[String(sort)] || 'c.id'
   // 确保 FX 相关表存在（与 fx.js 同步，幂等）
   try {
     await query(`
@@ -1099,7 +1106,7 @@ router.get('/customers', auth.authMiddleware(true), auth.readOpenOr('view_custom
     left join fx_set fs on fs.customer_id = c.id
     left join fx_pay fp on fp.customer_id = c.id
     where c.name ilike $1 or coalesce(c.abbr,'') ilike $1
-    order by ${sort} ${order === 'asc' ? 'asc' : 'desc'}
+    order by ${sortCol} ${order === 'asc' ? 'asc' : 'desc'}
     offset $2 limit $3
   `, [term, offset, Number(pageSize)])
   res.json({ total: Number(total.rows[0].count), items: rows.rows })
@@ -1384,7 +1391,8 @@ router.get('/accounts', auth.authMiddleware(true), auth.readOpenOr('view_account
     // 可按计算余额排序：按 opening_balance + 净额 排序
     balance: '(a.opening_balance + coalesce(agg.net_amount,0))',
     bank_zh: 'b.zh',
-    bank_code: 'b.code'
+    bank_code: 'b.code',
+    created_at: 'a.created_at'
   }
   const sortCol = sortMap[String(sort)] || sortMap.id
   const ord = String(order).toLowerCase() === 'asc' ? 'asc' : 'desc'
@@ -1395,7 +1403,7 @@ router.get('/accounts', auth.authMiddleware(true), auth.readOpenOr('view_account
        from transactions
        group by account_number
      )
-     select a.id, a.account_name, a.bank_account, a.currency_code, a.opening_balance,
+     select a.id, a.account_name, a.bank_account, a.currency_code, a.opening_balance, a.created_at,
        (a.opening_balance + coalesce(agg.net_amount,0)) as balance,
        b.id as bank_id, b.code as bank_code, b.zh as bank_zh, b.en as bank_en, b.logo_url as bank_logo
        from receiving_accounts a
@@ -1598,8 +1606,13 @@ router.post('/banks', auth.authMiddleware(true), auth.requirePerm('banks:create'
     try {
       const m = /^data:(.+);base64,(.*)$/i.exec(logo_data_url)
       if (!m) return res.status(400).json({ error: 'invalid data url' })
-      const mime = m[1]
+      // MIME 白名单：mime 由客户端控制，若允许 text/html / svg 会造成同源存储型 XSS
+      const mime = String(m[1]).toLowerCase().split(';')[0].trim()
+      if (!['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif'].includes(mime)) {
+        return res.status(400).json({ error: 'unsupported image type' })
+      }
       const buf = Buffer.from(m[2], 'base64')
+      if (buf.length > 2 * 1024 * 1024) return res.status(413).json({ error: 'logo too large (max 2MB)' })
       // 存入数据库
       try {
         const tmp = await query('insert into banks(code, zh, en, logo_url) values($1,$2,$3,$4) returning id', [code, zh, en, null])
@@ -1680,8 +1693,13 @@ router.put('/banks/:id', auth.authMiddleware(true), auth.requirePerm('banks:upda
     try {
       const m = /^data:(.+);base64,(.*)$/i.exec(logo_data_url)
       if (!m) return res.status(400).json({ error: 'invalid data url' })
-      const mime = m[1]
+      // MIME 白名单：mime 由客户端控制，若允许 text/html / svg 会造成同源存储型 XSS
+      const mime = String(m[1]).toLowerCase().split(';')[0].trim()
+      if (!['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif'].includes(mime)) {
+        return res.status(400).json({ error: 'unsupported image type' })
+      }
       const buf = Buffer.from(m[2], 'base64')
+      if (buf.length > 2 * 1024 * 1024) return res.status(413).json({ error: 'logo too large (max 2MB)' })
       // 直接写入 DB 表
       await query(
         `insert into bank_logos(bank_id, mime, data, updated_at)

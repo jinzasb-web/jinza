@@ -7,7 +7,7 @@
 
     <el-card shadow="never" class="card--plain">
       <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
-        <el-input v-model="q" :placeholder="$t('expenses.searchPlaceholder')" style="width:260px" clearable @clear="loadList" @keyup.enter="loadList" />
+        <el-input v-model="q" :placeholder="$t('expenses.searchPlaceholder')" style="width:260px" clearable @clear="search" @keyup.enter="search" />
         <el-select v-model="cate" :placeholder="$t('expenses.category')" clearable style="width:200px">
           <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
         </el-select>
@@ -15,7 +15,7 @@
           <el-option :label="$t('common.debit')" value="debit" />
           <el-option :label="$t('common.credit')" value="credit" />
         </el-select>
-        <el-button type="primary" @click="loadList">{{ $t('expenses.query') }}</el-button>
+        <el-button type="primary" @click="search">{{ $t('expenses.query') }}</el-button>
         <el-button type="success" @click="openAdd">{{ $t('expenses.add') }}</el-button>
       </div>
       <el-table :data="rows" border size="small">
@@ -39,6 +39,17 @@
           </template>
         </el-table-column>
       </el-table>
+      <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[20, 50, 100, 200]"
+          layout="total, sizes, prev, pager, next"
+          @current-change="loadList"
+          @size-change="onSizeChange"
+        />
+      </div>
     </el-card>
 
   <!-- 借贷报表 / Debit-Credit Report -->
@@ -109,6 +120,9 @@ const rows = ref([])
 const q = ref('')
 const cate = ref('')
 const drcr = ref('')
+const page = ref(1)
+const pageSize = ref(50)
+const total = ref(0)
 const range = ref([]) // 业务弱化日期筛选，但保留内部变量兼容 loadList
 // 使用 i18n 分类标签，值保持中文以兼容后端分类存储
 const categories = [
@@ -135,10 +149,15 @@ function money(v){ return Number(v||0).toLocaleString(undefined,{minimumFraction
 // 费用金额与借贷将通过银行流水匹配，不在此处录入科目与金额
 
 async function loadList(){
-  const params = { q: q.value||'', category: cate.value||'', drcr: drcr.value||'' }
+  const params = { q: q.value||'', category: cate.value||'', drcr: drcr.value||'', page: page.value, pageSize: pageSize.value }
   const res = await api.expenses.list(params)
   rows.value = res.items || []
+  total.value = Number(res.total || 0)
 }
+
+// 查询条件变化时回到第一页，否则会停在越界页码显示空表
+function search(){ page.value = 1; loadList() }
+function onSizeChange(){ page.value = 1; loadList() }
 
 function openAdd(){ isEdit.value=false; form.value = { id:null, category:'', desc:'', drcr:'' }; drawer.value=true }
 function edit(row){ isEdit.value=true; form.value = { id:row.id, category: row.category || '', desc: row.description || row.desc || '', drcr: row.drcr || '' }; drawer.value=true }

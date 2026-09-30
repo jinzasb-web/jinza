@@ -42,7 +42,6 @@
             <el-option :label="t('transactions.categoryOptions.expense')" value="支出" />
           </el-select>
           <el-input v-model.trim="filters.accountName" clearable :placeholder="t('transactions.accountName')" style="min-width: 160px; max-width: 200px;" />
-          <el-input v-model.trim="filters.bankName" clearable :placeholder="t('transactions.bankName')" style="min-width: 160px; max-width: 200px;" />
           <el-input v-model.trim="filters.relation" clearable :placeholder="t('transactions.relation')" style="min-width: 160px; max-width: 200px;" />
         </el-form-item>
         <el-form-item>
@@ -194,7 +193,7 @@ const stats = ref({ summary: {}, monthly: [], categories: [] })
 const transactions = ref([])
 const loading = ref(false)
 const pagination = reactive({ page: 1, pageSize: 20, total: 0, pages: 0 })
-const filters = reactive({ startDate: '', endDate: '', account: '', accountName: '', relation: '', customerId: null })
+const filters = reactive({ startDate: '', endDate: '', account: '', accountName: '', relation: '', category: '', customerId: null })
 const dateRange = ref([])
 // 列宽记忆
 const { colW, onColResize, reset: resetColMem } = useTableMemory('transactions-table-2')
@@ -224,6 +223,7 @@ const fetchStats = async () => {
     if (filters.endDate) params.endDate = filters.endDate
   if (filters.account) params.account = filters.account
   if (filters.accountName) params.accountName = filters.accountName
+  if (filters.category) params.category = filters.category
   if (filters.customerId) params.matchTargetId = filters.customerId
   else if (filters.relation) params.relation = filters.relation
     const data = await api.transactions.stats(params)
@@ -244,6 +244,7 @@ const fetchTransactions = async () => {
     if (filters.endDate) params.endDate = filters.endDate
     if (filters.account) params.account = filters.account
     if (filters.accountName) params.accountName = filters.accountName
+    if (filters.category) params.category = filters.category
     if (filters.customerId) params.matchTargetId = filters.customerId
     else if (filters.relation) params.relation = filters.relation
     const data = await api.transactions.list(params)
@@ -256,11 +257,11 @@ const fetchTransactions = async () => {
   } finally { loading.value = false }
 }
 
-const handleSizeChange = (size) => { pagination.pageSize = size; fetchTransactions() }
+const handleSizeChange = (size) => { pagination.pageSize = size; pagination.page = 1; fetchTransactions() }
 const handleCurrentChange = (page) => { pagination.page = page; fetchTransactions() }
 
 const goBack = () => router.push({ name: 'transactions' })
-const clearFilters = () => { dateRange.value = []; filters.startDate = ''; filters.endDate = ''; filters.customerId = null; filters.account = ''; filters.accountName=''; filters.bankName=''; filters.relation=''; filters.category=''; fetchStats() }
+const clearFilters = () => { dateRange.value = []; filters.startDate = ''; filters.endDate = ''; filters.customerId = null; filters.account = ''; filters.accountName=''; filters.relation=''; filters.category=''; pagination.page = 1; fetchStats() }
 
 const formatCurrency = (value) => {
   if (value === undefined || value === null) return '0.00'

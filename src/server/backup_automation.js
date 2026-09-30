@@ -62,6 +62,8 @@ async function dumpTablesToZipFile({ tables, outputPath, meta = {} }) {
       const out = fs.createWriteStream(outputPath)
       const archive = archiver('zip', { zlib: { level: 9 } })
       archive.on('error', reject)
+      // 必须监听输出流的 error：磁盘写满(ENOSPC)/无权限(EACCES)时若无监听器，Node 会抛出未捕获异常并终止整个进程
+      out.on('error', reject)
       out.on('close', () => resolve({ bytes: archive.pointer() }))
       archive.pipe(out)
 

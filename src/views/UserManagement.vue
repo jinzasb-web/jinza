@@ -571,6 +571,9 @@ async function toggleActive(u) {
     await api.users.update(u.id, { is_active: u.is_active })
     ElMessage.success(t('users.statusUpdated'))
   } catch (e) {
+    // el-switch 的 v-model 已经先改了本地状态，请求失败必须回滚，
+    // 否则界面显示「已禁用」而数据库里仍是启用，管理员会误以为已生效
+    u.is_active = !u.is_active
     ElMessage.error(t('users.updateFailed'))
   }
 }

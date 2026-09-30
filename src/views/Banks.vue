@@ -94,11 +94,18 @@ async function remove(code) {
 }
 
 async function reset() {
-  await api.resetBanks()
-  await load()
-  ElMessage.success(t('banks.resetDefaults'))
-  // 重置后清空所有失败标记，避免旧失败导致不再尝试加载图片
-  try { logoFail.value = {} } catch {}
+  try {
+    await ElMessageBox.confirm(t('banks.resetDefaults') + '？', t('common.warning'), { type: 'warning' })
+    await api.resetBanks()
+    await load()
+    ElMessage.success(t('banks.resetDefaults'))
+    // 重置后清空所有失败标记，避免旧失败导致不再尝试加载图片
+    try { logoFail.value = {} } catch {}
+  } catch (e) {
+    // 用户取消：ElMessageBox 抛出 'cancel'/'close'，不提示
+    if (e === 'cancel' || e === 'close') return
+    ElMessage.error('重置失败：' + (e?.message || ''))
+  }
 }
 
 function openAdd() {

@@ -158,7 +158,7 @@ if (shouldServeStatic) {
         res.setHeader('Cache-Control', 'no-store')
       } else if (/\.(?:js|css|png|jpg|jpeg|svg|webp|ico|woff2?|ttf|otf)$/.test(filePath)) {
         // 若包含哈希文件名(rollup/vite 产物)，启用长期缓存
-        const hasHash = /\.[a-f0-9]{8,}\./i.test(path.basename(filePath))
+        const hasHash = /[-.][A-Za-z0-9_-]{8,}\./i.test(path.basename(filePath))
         if (hasHash) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
         } else {

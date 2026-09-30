@@ -65,7 +65,10 @@ const onSubmit = async () => {
   try {
     const res = await api.login(form.value.username, form.value.password)
     save({ token: res.token, user: res.user, perms: res.perms, must_change_password: !!res.must_change_password }, true)
-    const redirect = res.must_change_password ? '/change-password' : (route.query.redirect || '/')
+    const qRedirect = route.query.redirect
+    const rawRedirect = res.must_change_password ? '/change-password' : (Array.isArray(qRedirect) ? qRedirect[0] : qRedirect)
+    // 只允许站内相对路径（单个 / 开头且不以 // 开头），防止开放重定向
+    const redirect = (typeof rawRedirect === 'string' && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/'
     if (res.must_change_password) {
       ElMessage({ message: '首次登录，请修改密码', type: 'warning', duration: 1800 })
     } else {

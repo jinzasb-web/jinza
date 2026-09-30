@@ -1,6 +1,11 @@
 node_modules/
 dist/
 
+# runtime-generated directories (server.js creates these at startup)
+uploads/
+public/banks/
+src/server/backups/
+
 # env files
 .env
 .env.local
