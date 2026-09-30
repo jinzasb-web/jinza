@@ -168,6 +168,18 @@ export async function ensureSchema() {
       );
     `)
   } catch {}
+  // 规范化 banks.logo_url：只要 bank_logos 里有这家银行的 Logo，就把 logo_url 指向 DB 端点。
+  // 否则各列表（付款待审、明细抽屉、回执 PDF）拿到空的 logo_url，只能回退到静态 /banks/<code>.svg，
+  // 而线上 public/banks 目录是空的 → 图标永远显示不出来。
+  // 幂等；仅修正空值或已失效的静态路径，不动 /uploads、/api/banks 与外部 URL。
+  try {
+    await query(`
+      update banks b
+         set logo_url = '/api/banks/' || b.id || '/logo'
+       where exists (select 1 from bank_logos l where l.bank_id = b.id)
+         and (b.logo_url is null or b.logo_url = '' or b.logo_url like '/banks/%')
+    `)
+  } catch {}
   // 用户会话（单端登录 + 空闲超时）
   await query(`
     create table if not exists user_sessions (

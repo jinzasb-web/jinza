@@ -1575,7 +1575,8 @@ fxRouter.get('/payments', auth.authMiddleware(true), auth.readOpenOr('fx:payment
              ), 0)
          ) as balance_cny,
          b.zh as bank_name,
-         b.code as bank_code
+         b.code as bank_code,
+         b.logo_url as bank_logo_url
        from fx_payments p
        left join users u on u.id = p.created_by
        left join agg a on a.payment_id = p.id
@@ -1722,7 +1723,8 @@ fxRouter.get('/payments/:id', auth.authMiddleware(true), auth.readOpenOr('fx:pay
        upper(i.currency_code) as currency_code,
        i.amount,
        coalesce(bcra.zh, bid.zh, bacc.zh) as bank_name,
-       coalesce(bcra.code, bid.code, bacc.code) as bank_code
+       coalesce(bcra.code, bid.code, bacc.code) as bank_code,
+        coalesce(bcra.logo_url, bid.logo_url, bacc.logo_url) as bank_logo_url
      from fx_payment_items i
      left join fx_payments p on p.id = i.payment_id
      -- 1) 优先客户专属账户（CRA）指定的银行
@@ -2021,6 +2023,7 @@ fxRouter.get('/payments/:id/pdf', auth.authMiddleware(true), auth.readOpenOr('fx
     select 
       i.*, 
       b.code as bank_code,
+      b.logo_url as bank_logo_url,
       b.zh   as bank_name_zh,
       b.en   as bank_name_en
     from fx_payment_items i
