@@ -857,6 +857,7 @@ const messages = {
   remainingPayable: '还可付金额',
   autoClampedToRemaining: '已按剩余可输入金额自动截断',
   settlementCreated: '已生成结汇单：{n} 笔，马币 {base}，折算 {settled}',
+      settlementWrittenOff: '已核销 {n} 笔：可结汇金额为 0，无需汇率',
       paymentCreated: '已生成付款单：{n} 笔，总额 {total}',
   baseAmount: '马币金额',
       settledAmount: '折算后金额',

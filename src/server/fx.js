@@ -640,7 +640,8 @@ fxRouter.get('/platforms/:id/ledger', auth.authMiddleware(true), auth.readOpenOr
 fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx:settlement:create','manage_fx'), async (req, res) => {
   await ensureDDL()
   const { customer_id, customer_name, settle_date, rate, items = [] } = req.body || {}
-  if (!customer_id || !settle_date || !rate || !Array.isArray(items) || !items.length) return res.status(400).json({ error: 'invalid payload' })
+  // 不在此处强制校验 rate：可结汇金额为 0 时是纯核销，结汇金额必然为 0，与汇率无关
+  if (!customer_id || !settle_date || !Array.isArray(items) || !items.length) return res.status(400).json({ error: 'invalid payload' })
   const created_by = req.user?.id || null
   // 生成单号：基于 created_at ISO 字符串去除冒号与连字符，保留 T
   const createdAtIso = new Date().toISOString()
@@ -705,6 +706,10 @@ fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx
   })
   const total_base = round2(computedItems.reduce((s, c) => s + c.base, 0))
   const total_settled = computedItems.reduce((s, c) => s + c.settled, 0)
+  // 负数：借方已超过「贷方×税率系数」，结汇金额为负没有业务含义，拒绝
+  if (total_base < 0) return res.status(400).json({ error: 'negative settlement base', detail: { total_base } })
+  // 可结汇金额不为 0 时必须提供有效汇率；为 0 时属核销，无需汇率
+  if (total_base !== 0 && !(rateNum > 0)) return res.status(400).json({ error: 'rate required', detail: { total_base } })
   const ins = await query(
     `insert into fx_settlements(bill_no, customer_id, customer_name, settle_date, rate, customer_tax_rate, total_base, total_settled, created_by)
      values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,

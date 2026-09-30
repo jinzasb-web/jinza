@@ -178,7 +178,8 @@ const { colW: colWSettle, onColResize: onColResizeSettle } = useTableMemory('fx-
 const { colW: colWPay, onColResize: onColResizePay } = useTableMemory('fx-mgmt-payment')
 const payTableRef = ref(null)
 
-const canCreateSettlement = computed(() => !!(settleDate.value && customerId.value && rate.value && selMatched.value.length))
+// 可结汇金额为 0 时属于纯核销，无需填写汇率，因此不再强制要求 rate
+const canCreateSettlement = computed(() => !!(settleDate.value && customerId.value && selMatched.value.length && (rate.value || selectedBaseTotal.value === 0)))
 const creatingSettlement = ref(false)
 // 防重复提交：付款单没有 loading 保护时，双击会发出两次 POST，后端各生成一张单据
 const creatingPayment = ref(false)
@@ -293,11 +294,13 @@ async function createSettlement(){
   if (!selMatched.value.length) { creatingSettlement.value = false; return }
   const baseSum = selectedBaseTotal.value
   // 校验余额：按所选明细全额
-  if (baseSum <= 0) { ElMessage.error(t('fx.errNothingToSettle')); creatingSettlement.value = false; return }
+  // 允许「可结汇金额为 0」的核销（结汇金额必然为 0，无需汇率）；负数（借方已超过可结汇额）仍拒绝
+  if (baseSum < 0) { ElMessage.error(t('fx.errNothingToSettle')); creatingSettlement.value = false; return }
   if (baseSum > myrBalance.value) { ElMessage.error(t('fx.errExceedBalance')); creatingSettlement.value = false; return }
 
   const r = Number(rate.value || 0)
-  if (!r || r <= 0) { ElMessage.error(t('fx.errRateRequired')); creatingSettlement.value = false; return }
+  // 可结汇金额为 0 的核销不需要汇率
+  if (baseSum !== 0 && (!r || r <= 0)) { ElMessage.error(t('fx.errRateRequired')); creatingSettlement.value = false; return }
 
   // 全额：可结汇金额 = 贷方 × 税率系数 − 借方，再乘汇率折算，四舍五入到元
   // 后端会以 transactions 表为准重新计算并落库，这里的值用于展示与校验
@@ -321,7 +324,11 @@ async function createSettlement(){
       // 税率由后端根据 customer_id 查询，前端不再传递
       items
     })
-    ElMessage.success(t('fx.settlementCreated', { n: items.length, base: money(selectedBaseTotal.value), settled: money(selectedSettledTotal.value) }))
+    if (selectedSettledTotal.value === 0) {
+      ElMessage.success(t('fx.settlementWrittenOff', { n: items.length }))
+    } else {
+      ElMessage.success(t('fx.settlementCreated', { n: items.length, base: money(selectedBaseTotal.value), settled: money(selectedSettledTotal.value) }))
+    }
     try { emit('settlementCreated', { n: items.length, base: selectedBaseTotal.value, settled: selectedSettledTotal.value, customerId: customerId.value }) } catch {}
     // 清空并刷新
     selMatched.value = []
