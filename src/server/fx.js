@@ -678,9 +678,33 @@ fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx
     console.error('settlement tax rate lookup failed:', e?.message || e)
   }
 
-  // 计算合计：马币金额（按 credit-debit）与结汇金额（基数×税率×汇率）
-  const total_base = items.reduce((s, it) => s + Number(it.amount_base||0), 0)
-  const total_settled = items.reduce((s, it) => s + Math.round(Number(it.amount_base||0) * Number(rate||0) * taxFactor), 0)
+  // 权威计算「可结汇金额」：贷方金额 × 税率系数 − 借方金额
+  // 即税额只作用于贷方，借方是已经付出的部分、不参与计税。
+  // 例：贷方 10000、借方 5000、客户税率 3% → 10000 × 0.97 − 5000 = 4700
+  // 注：不再信任前端传入的 amount_base，一律以 transactions 表数据为准，
+  //     避免前后端口径漂移、以及客户端可任意抬高结汇金额（进而抬高客户余额）
+  const tids = items.map(it => Number(it.transaction_id)).filter(n => Number.isInteger(n) && n > 0)
+  if (tids.length !== items.length) return res.status(400).json({ error: 'invalid transaction_id in items' })
+  const txRes = await query(
+    `select id, coalesce(credit_amount,0) as credit_amount, coalesce(debit_amount,0) as debit_amount
+       from transactions where id = ANY($1::int[])`,
+    [tids]
+  )
+  const txMap = new Map(txRes.rows.map(r => [Number(r.id), r]))
+  const missingTx = tids.filter(tid => !txMap.has(tid))
+  if (missingTx.length) return res.status(400).json({ error: 'transaction not found', detail: { ids: missingTx } })
+  const round2 = n => Math.round(n * 100) / 100
+  const rateNum = Number(rate || 0)
+  const computedItems = items.map(it => {
+    const tx = txMap.get(Number(it.transaction_id))
+    const credit = Number(tx.credit_amount || 0)
+    const debit = Number(tx.debit_amount || 0)
+    const base = round2(credit * taxFactor - debit)
+    const settled = Math.round(base * rateNum)
+    return { it, base, settled }
+  })
+  const total_base = round2(computedItems.reduce((s, c) => s + c.base, 0))
+  const total_settled = computedItems.reduce((s, c) => s + c.settled, 0)
   const ins = await query(
     `insert into fx_settlements(bill_no, customer_id, customer_name, settle_date, rate, customer_tax_rate, total_base, total_settled, created_by)
      values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,
@@ -689,15 +713,14 @@ fxRouter.post('/settlements', auth.authMiddleware(true), auth.requireAnyPerm('fx
   )
   const sid = ins.rows[0].id
   // 批量写入明细
-  if (items.length) {
+  if (computedItems.length) {
     const values = []
     const params = []
     let idx = 1
-    for (const it of items) {
-      const base = Number(it.amount_base) || 0
-      const settled = Math.round(base * Number(rate || 0) * taxFactor)
+    for (const c of computedItems) {
+      const it = c.it
       values.push(`($${idx++},$${idx++},$${idx++},$${idx++},$${idx++},$${idx++})`)
-      params.push(sid, Number(it.transaction_id), it.account_number || null, it.trn_date || null, base, settled)
+      params.push(sid, Number(it.transaction_id), it.account_number || null, it.trn_date || null, c.base, c.settled)
     }
     await query(`insert into fx_settlement_items(settlement_id, transaction_id, account_number, trn_date, amount_base, amount_settled) values ${values.join(',')}`, params)
   }

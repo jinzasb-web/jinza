@@ -47,6 +47,9 @@
           <el-table-column prop="credit_amount" column-key="credit_amount" :label="t('transactions.creditAmount')" :width="colWSettle('credit_amount',120)" align="right">
             <template #default="{ row }">{{ money(row.credit_amount) }}</template>
           </el-table-column>
+          <el-table-column prop="debit_amount" column-key="debit_amount" :label="t('transactions.debitAmount')" :width="colWSettle('debit_amount',120)" align="right">
+            <template #default="{ row }">{{ money(row.debit_amount) }}</template>
+          </el-table-column>
         </el-table>
       </el-card>
 
@@ -182,7 +185,16 @@ const creatingPayment = ref(false)
 const overBudget = computed(() => paymentTotal.value > Number(cnyBalance.value || 0))
 const canCreatePayment = computed(() => !!(payDate.value && payCustomerId.value && accounts.value.some(a => Number(a._amount) > 0) && !overBudget.value))
 
-const selectedBaseTotal = computed(() => selMatched.value.reduce((s, r) => s + (Number(r.credit_amount || 0) - Number(r.debit_amount || 0)), 0))
+// 单笔「可结汇金额」= 贷方金额 × 税率系数 − 借方金额
+// 即税额只作用于贷方；借方是已经付出的部分，不参与计税。
+// 例：贷方 10000、借方 5000、客户税率 3% → 10000 × 0.97 − 5000 = 4700
+function settleBaseOf(row){
+  const credit = Number(row?.credit_amount || 0)
+  const debit = Number(row?.debit_amount || 0)
+  const f = percentToFactor(customerTaxRate.value)
+  return Math.round((credit * f - debit) * 100) / 100
+}
+const selectedBaseTotal = computed(() => Math.round(selMatched.value.reduce((s, r) => s + settleBaseOf(r), 0) * 100) / 100)
 // 百分比(0-100) -> 系数(0-1)，兼容传入即为系数(<=1)的情况
 function percentToFactor(p){
   const n = Number(p || 0)
@@ -190,12 +202,12 @@ function percentToFactor(p){
   const f = 1 - n / 100
   return Math.max(0, Math.min(1, Math.round(f * 1000) / 1000))
 }
-// 折算总计 = 勾选金额 × 系数 × 汇率，四舍五入到元
+// 折算总计 = 可结汇金额 × 汇率，四舍五入到元
+// 注意：税率已经在 settleBaseOf 中作用于贷方，这里不能再乘一次系数（否则会重复计税）
 const selectedSettledTotal = computed(() => {
   const base = selectedBaseTotal.value
-  const taxFactor = percentToFactor(customerTaxRate.value)
   const r = Number(rate.value || 0)
-  return Math.round(base * taxFactor * r)
+  return Math.round(base * r)
 })
 const paymentTotal = computed(() => accounts.value.reduce((s, a) => s + (Number(a._amount || 0) > 0 ? Number(a._amount || 0) : 0), 0))
 const remainingPayable = computed(() => {
@@ -287,16 +299,16 @@ async function createSettlement(){
   const r = Number(rate.value || 0)
   if (!r || r <= 0) { ElMessage.error(t('fx.errRateRequired')); creatingSettlement.value = false; return }
 
-  // 全额：按所选明细全额，各自折算四舍五入到元
-  const taxFactor = percentToFactor(customerTaxRate.value)
+  // 全额：可结汇金额 = 贷方 × 税率系数 − 借方，再乘汇率折算，四舍五入到元
+  // 后端会以 transactions 表为准重新计算并落库，这里的值用于展示与校验
   const items = selMatched.value.map(row => {
-    const base = Number(row.credit_amount||0) - Number(row.debit_amount||0)
+    const base = settleBaseOf(row)
     return {
       transaction_id: row.id,
       account_number: row.account_number,
       trn_date: row.trn_date || row.transaction_date,
       amount_base: base,
-      amount_settled: Math.round(base * taxFactor * r)
+      amount_settled: Math.round(base * r)
     }
   })
   const found = allCustomers.value.find(c => c.id === customerId.value)
