@@ -304,6 +304,8 @@ export const api = {
     export: (params={}) => request(`/transactions/export?${new URLSearchParams(params).toString()}`),
     match: (id, payload) => request(`/transactions/${id}/match`, { method: 'POST', body: JSON.stringify(payload) }),
     unmatch: (id) => request(`/transactions/${id}/unmatch`, { method: 'POST' }),
+    // 批量取消关联（服务端在同一事务内处理全部 id）
+    batchUnmatch: (ids) => request('/transactions/batch-unmatch', { method: 'POST', body: JSON.stringify({ ids }) }),
     deleteTransactions: (ids) => request('/transactions/batch-delete', { method: 'POST', body: JSON.stringify({ ids }) }),
     create: (data) => request('/transactions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

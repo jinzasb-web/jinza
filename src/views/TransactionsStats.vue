@@ -2,10 +2,16 @@
   <div class="transactions-stats">
     <div class="header-row">
       <h1>{{ t('transactions.statsPageTitle') }}</h1>
-      <el-button type="default" @click="goBack">
-        <el-icon><ArrowLeft /></el-icon>
-        {{ t('transactions.backToList') }}
-      </el-button>
+      <div class="header-actions">
+        <span v-if="selectedRows.length" class="selected-hint">{{ t('transactions.selectedCount', { n: selectedRows.length }) }}</span>
+        <el-button type="danger" :disabled="!selectedRows.length" :loading="batchUnmatching" @click="batchUnmatch">
+          {{ t('transactions.batchUnmatch') }}
+        </el-button>
+        <el-button type="default" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon>
+          {{ t('transactions.backToList') }}
+        </el-button>
+      </div>
     </div>
 
     <el-card class="filters compact" shadow="never">
@@ -46,7 +52,7 @@
         </el-form-item>
         <el-form-item>
           <el-button @click="clearFilters">{{ t('transactions.clear') }}</el-button>
-          <el-button type="primary" @click="fetchStats">{{ t('transactions.apply') }}</el-button>
+          <el-button type="primary" @click="applyFilters">{{ t('transactions.apply') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -84,11 +90,13 @@
 
     <!-- 表2：复制表1（交易列表）结构，但逻辑隔离 -->
     <el-table
+      ref="tableRef"
       v-loading="loading"
       :data="transactions"
       style="width: 100%; margin-top: 20px;"
       border
       stripe
+      @selection-change="onSelectionChange"
       @row-dblclick="onRowDblClick"
       @header-dragend="onColResize"
     >
@@ -180,7 +188,7 @@
 import { ref, reactive, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { api } from '@/api'
 import { useTableMemory } from '@/composables/useTableMemory'
 import { useBankLogo } from '@/composables/useBankLogo'
@@ -202,6 +210,12 @@ const { colW, onColResize, reset: resetColMem } = useTableMemory('transactions-t
 const editDialogVisible = ref(false)
 const editing = ref(false)
 const editingRow = ref(null)
+
+// 批量取消关联
+const tableRef = ref(null)
+const selectedRows = ref([])
+const batchUnmatching = ref(false)
+
 const customerOptions = ref([])
 const customersLoading = ref(false)
 const editForm = reactive({ customerId: null })
@@ -259,6 +273,43 @@ const fetchTransactions = async () => {
 
 const handleSizeChange = (size) => { pagination.pageSize = size; pagination.page = 1; fetchTransactions() }
 const handleCurrentChange = (page) => { pagination.page = page; fetchTransactions() }
+
+// 应用筛选：必须回到第 1 页。否则在第 N 页修改筛选条件后，
+// 结果不足 N 页时表格会是空的（用户会以为筛选没生效）
+const applyFilters = () => {
+  pagination.page = 1
+  selectedRows.value = []
+  fetchStats()
+}
+
+function onSelectionChange(rows) {
+  selectedRows.value = Array.isArray(rows) ? rows : []
+}
+
+// 批量取消关联
+async function batchUnmatch() {
+  const ids = selectedRows.value.map(r => Number(r?.id)).filter(n => Number.isInteger(n) && n > 0)
+  if (!ids.length) return
+  try {
+    await ElMessageBox.confirm(
+      t('transactions.batchUnmatchConfirm', { n: ids.length }),
+      t('common.warning'),
+      { type: 'warning' }
+    )
+  } catch { return } // 用户取消
+  batchUnmatching.value = true
+  try {
+    const res = await api.transactions.batchUnmatch(ids)
+    const n = Number(res?.updated ?? ids.length)
+    const skipped = Array.isArray(res?.skipped) ? res.skipped.length : 0
+    ElMessage.success(t('transactions.batchUnmatchSuccess', { n }) + (skipped ? '（已跳过 ' + skipped + ' 笔）' : ''))
+    selectedRows.value = []
+    try { tableRef.value?.clearSelection() } catch {}
+    applyFilters()
+  } catch (e) {
+    ElMessage.error(e?.message || t('transactions.batchUnmatchFailed'))
+  } finally { batchUnmatching.value = false }
+}
 
 const goBack = () => router.push({ name: 'transactions' })
 const clearFilters = () => { dateRange.value = []; filters.startDate = ''; filters.endDate = ''; filters.customerId = null; filters.account = ''; filters.accountName=''; filters.relation=''; filters.category=''; pagination.page = 1; fetchStats() }
@@ -375,6 +426,8 @@ async function doUnmatch() {
 <style scoped>
 .transactions-stats { padding: 20px; }
 .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.selected-hint { font-size: 13px; color: #909399; }
 .filters { margin-bottom: 12px; }
 .filters.compact { padding: 8px 12px; }
 .filters-inline { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }

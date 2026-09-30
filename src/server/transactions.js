@@ -385,7 +385,9 @@ transactionsRouter.get('/stats', auth.authMiddleware(true), auth.readOpenOr('vie
       accountName,
       relation,
       category,
-      status = 'all'
+      status = 'all',
+      matchTargetId,
+      matchType
     } = req.query;
     
     let whereClause = 'WHERE 1=1';
@@ -430,6 +432,21 @@ transactionsRouter.get('/stats', auth.authMiddleware(true), auth.readOpenOr('vie
       whereClause += ` AND (matched = false OR matched IS NULL)`;
     } else if (status === 'matched') {
       whereClause += ` AND matched = true`;
+    }
+    // 指定匹配对象ID / 匹配类型：必须与列表接口一致，
+    // 否则用户选了客户后「列表已过滤、统计卡片却没过滤」，两边数字对不上
+    if (matchTargetId) {
+      const mtid = parseInt(matchTargetId, 10)
+      if (Number.isFinite(mtid)) {
+        whereClause += ` AND match_target_id = $${paramIndex}`
+        queryParams.push(mtid)
+        paramIndex++
+      }
+    }
+    if (matchType) {
+      whereClause += ` AND match_type = $${paramIndex}`
+      queryParams.push(String(matchType))
+      paramIndex++
     }
     
     // 总体统计（原始口径）
@@ -935,6 +952,67 @@ transactionsRouter.post('/:id(\\d+)/unmatch', auth.authMiddleware(true), auth.re
     res.status(500).json({ error: '取消匹配失败', detail: e?.message });
   }
 });
+
+// 批量取消匹配（在同一个事务内处理全部 id，避免只成功一半）
+transactionsRouter.post('/batch-unmatch', auth.authMiddleware(true), auth.requirePerm('transactions:match'), async (req, res) => {
+  try {
+    await ensureTransactionsDDL()
+    const raw = Array.isArray(req.body?.ids) ? req.body.ids : []
+    // 与批量删除相同的服务端清洗：仅保留正整数并去重
+    const ids = Array.from(new Set(raw.map(n => Math.trunc(Number(n))).filter(n => Number.isInteger(n) && n > 0)))
+    if (!ids.length) return res.status(400).json({ error: 'ids required' })
+
+    const result = await withTransaction(async (client) => {
+      const q = (text, params) => queryWithClient(client, text, params)
+      let updated = 0
+      const skipped = []
+      for (const id of ids) {
+        // 与单条取消匹配一致：先在事务内读取匹配信息与金额/币种
+        const tr = await q(`
+          select t.id, t.matched, t.match_type, t.match_target_id,
+                 t.debit_amount as debit, t.credit_amount as credit,
+                 a.currency_code as currency
+          from transactions t
+          left join receiving_accounts a on a.bank_account = t.account_number
+          where t.id=$1
+        `, [id])
+        if (!tr.rowCount) { skipped.push({ id, reason: 'not found' }); continue }
+        const row = tr.rows[0]
+        if (!row.matched) { skipped.push({ id, reason: 'not matched' }); continue }
+
+        // buyfx 平台商匹配且此前已加账 → 回滚平台余额
+        // 锁行用单表查询（外连接的可空侧不能加 FOR UPDATE）
+        if (String(row.match_type || '').toLowerCase() === 'buyfx' && row.match_target_id) {
+          const chk = await q('select coalesce(platform_delta_applied,false) as applied from transactions where id=$1 for update', [id])
+          const applied = chk.rowCount ? !!chk.rows[0].applied : false
+          if (applied) {
+            const pid = Number(row.match_target_id)
+            const rawCur = (row.currency == null ? 'MYR' : String(row.currency)).toUpperCase().trim()
+            const cur = rawCur === 'RM' || rawCur === 'MY' ? 'MYR' : (rawCur === 'RMB' ? 'CNY' : rawCur || 'MYR')
+            const field = cur === 'USD' ? 'balance_usd' : (cur === 'MYR' ? 'balance_myr' : (cur === 'CNY' ? 'balance_cny' : 'balance_myr'))
+            const delta = Number(row.debit || 0) - Number(row.credit || 0)
+            await q(`update fx_platforms set ${field} = coalesce(${field},0) - $1 where id=$2`, [delta, pid])
+            await q(`update transactions set platform_delta_applied=false where id=$1`, [id])
+          }
+        }
+
+        // 清空匹配信息（与单条取消匹配完全相同的语句）
+        await q(
+          `update transactions set matched=false, match_type=null, match_target_id=null, match_target_name=null, matched_by=null, matched_at=null, updated_at=now() where id=$1`,
+          [id]
+        )
+        updated++
+      }
+      return { updated, skipped }
+    })
+
+    try { await auth.logActivity(req.user?.id, 'transactions.batch_unmatch', { count: result.updated, ids }, req) } catch {}
+    return res.json({ success: true, updated: result.updated, skipped: result.skipped })
+  } catch (e) {
+    console.error('batch unmatch failed', e)
+    res.status(500).json({ error: '批量取消关联失败', detail: e?.message })
+  }
+})
 
 // 简单的CSV导入功能
 transactionsRouter.post('/simple-import', auth.authMiddleware(true), auth.requirePerm('transactions:import'), async (req, res) => {
