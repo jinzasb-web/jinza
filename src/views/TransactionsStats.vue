@@ -259,7 +259,7 @@ const fetchTransactions = async () => {
     if (filters.account) params.account = filters.account
     if (filters.accountName) params.accountName = filters.accountName
     if (filters.category) params.category = filters.category
-    if (filters.customerId) params.matchTargetId = filters.customerId
+    if (filters.customerId) { params.matchType = 'customer'; params.matchTargetId = filters.customerId }
     else if (filters.relation) params.relation = filters.relation
     const data = await api.transactions.list(params)
     transactions.value = Array.isArray(data?.data) ? data.data.map(normalizeRow) : []

@@ -446,7 +446,9 @@ export const api = {
     convertPlatformCurrency: (platformId, data) => request(`/fx/platforms/${platformId}/convert`, { method: 'POST', body: JSON.stringify(data) })
   },
   // 按客户拉取已匹配交易，辅助结汇区
-  transactionsByCustomer: (customerId, params={}) => request(`/transactions?${new URLSearchParams({ status:'matched', matchTargetId: customerId, ...params }).toString()}`),
+  // 必须带 matchType=customer：match_target_id 是多态的（调拨存账户 id、购汇存平台 id、费用存费用 id），
+  // 否则那些记录只要 target id 与客户 id 相同，就会被错误地拉进这个客户的结汇列表
+  transactionsByCustomer: (customerId, params={}) => request(`/transactions?${new URLSearchParams({ status:'matched', matchType:'customer', matchTargetId: customerId, ...params }).toString()}`),
   requestAccounts: async () => {
     const res = await request('/accounts')
     // 服务端返回形如 { total, items }，这里仅透出 items

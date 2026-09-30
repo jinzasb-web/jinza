@@ -223,9 +223,16 @@ transactionsRouter.get('/', auth.authMiddleware(true), auth.readOpenOr('view_tra
       paramIndex++
     }
     // 指定匹配对象ID（常用于拉取某客户的已匹配交易）
+    // ⚠️ match_target_id 是多态的：客户匹配存客户 id；调拨存收款账户 id；购汇存平台 id；费用存费用 id。
+    // 因此按 matchTargetId 过滤时必须同时限定 match_type，否则会出现
+    // 「批量匹配调拨之后，那些记录出现在 id 相同的客户列表里」这类错配。
+    // 未显式传 matchType 时按客户语义处理（本项目所有调用方的实际语义）。
     if (matchTargetId) {
       const mtid = parseInt(matchTargetId, 10)
       if (Number.isFinite(mtid)) {
+        if (!matchType) {
+          whereClause += ` AND match_type = 'customer'`
+        }
         whereClause += ` AND match_target_id = $${paramIndex}`
         queryParams.push(mtid)
         paramIndex++
@@ -438,6 +445,10 @@ transactionsRouter.get('/stats', auth.authMiddleware(true), auth.readOpenOr('vie
     if (matchTargetId) {
       const mtid = parseInt(matchTargetId, 10)
       if (Number.isFinite(mtid)) {
+        // 同上：未指定 matchType 时按客户语义，避免把调拨/购汇/费用的 target id 误当客户 id
+        if (!matchType) {
+          whereClause += ` AND match_type = 'customer'`
+        }
         whereClause += ` AND match_target_id = $${paramIndex}`
         queryParams.push(mtid)
         paramIndex++
